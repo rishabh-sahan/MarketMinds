@@ -28,7 +28,31 @@ _UA = "tradingagents/0.2 (+https://github.com/TauricResearch/TradingAgents)"
 # Default subreddits ordered roughly by signal density for ticker-specific
 # discussion. wallstreetbets has the most volume but most noise; stocks /
 # investing trend more measured. Caller can override.
-DEFAULT_SUBREDDITS = ("wallstreetbets", "stocks", "investing")
+DEFAULT_SUBREDDITS = (
+    "wallstreetbets",
+    "stocks",
+    "investing",
+    "IndianStockMarket",
+    "IndianStocks",
+    "IndiaInvestments",
+    "StockMarketIndia",
+    "IndianStreetBets",
+    "Indiastreetbets",
+    "India_Investments",
+    "IPO_India",
+    "indianeconomy",
+    "IndiaPulse",
+    "IndiaGrowthStocks",
+    "ShareBazarIndia",
+    "IndiaFinance",
+    "Indiantradingbets",
+    "IndiaBusiness",
+    "personalfinanceindia",
+    "StockMarket",
+    "EquityResearchIndia",
+    "GoldIndia",
+    "IndiaMoney",
+)
 
 
 def _fetch_subreddit(
