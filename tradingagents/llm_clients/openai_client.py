@@ -133,7 +133,8 @@ class MinimaxChatOpenAI(NormalizedChatOpenAI):
 # Kwargs forwarded from user config to ChatOpenAI
 _PASSTHROUGH_KWARGS = (
     "timeout", "max_retries", "reasoning_effort",
-    "api_key", "callbacks", "http_client", "http_async_client",
+    "max_tokens", "api_key", "callbacks",
+    "http_client", "http_async_client",
 )
 
 # Provider base URLs. API-key env vars live in api_key_env.PROVIDER_API_KEY_ENV
@@ -220,6 +221,16 @@ class OpenAIClient(BaseLLMClient):
         for key in _PASSTHROUGH_KWARGS:
             if key in self.kwargs:
                 llm_kwargs[key] = self.kwargs[key]
+
+        if self.provider == "openrouter" and "max_tokens" not in llm_kwargs:
+            env_limit = os.getenv("OPENROUTER_MAX_TOKENS")
+            if env_limit:
+                try:
+                    llm_kwargs["max_tokens"] = int(env_limit)
+                except ValueError:
+                    llm_kwargs["max_tokens"] = 2048
+            else:
+                llm_kwargs["max_tokens"] = 2048
 
         # Native OpenAI: use Responses API for consistent behavior across
         # all model families. Third-party providers use Chat Completions.

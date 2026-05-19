@@ -175,6 +175,22 @@ MODEL_OPTIONS: ProviderModeOptions = {
             ("Custom model ID", "custom"),
         ],
     },
+    "openrouter": {
+        "quick": [
+            ("Custom model ID", "custom"),
+        ],
+        "deep": [
+            ("Custom model ID", "custom"),
+        ],
+    },
+    "azure": {
+        "quick": [
+            ("Custom model ID", "custom"),
+        ],
+        "deep": [
+            ("Custom model ID", "custom"),
+        ],
+    },
 }
 
 

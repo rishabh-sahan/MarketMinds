@@ -1,0 +1,181 @@
+.config-page {
+  max-width: var(--content-max-width);
+  margin: 0 auto;
+  padding: var(--space-xl) var(--space-lg);
+}
+
+.config-message {
+  padding: var(--space-md);
+  border-radius: var(--radius-md);
+  font-size: 0.875rem;
+  margin-bottom: var(--space-lg);
+  animation: fadeIn 0.3s ease;
+}
+
+.config-message.success {
+  background: rgba(0, 200, 83, 0.1);
+  border: 1px solid rgba(0, 200, 83, 0.3);
+  color: var(--accent-green);
+}
+
+.config-message.error {
+  background: rgba(255, 82, 82, 0.1);
+  border: 1px solid rgba(255, 82, 82, 0.3);
+  color: var(--accent-red);
+}
+
+.config-layout {
+  display: grid;
+  grid-template-columns: 1fr 300px;
+  gap: var(--space-lg);
+  align-items: start;
+}
+
+/* Main Config */
+.config-main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+}
+
+.config-group {
+  padding: var(--space-lg);
+}
+
+.config-group-title {
+  font-size: 0.9rem;
+  color: var(--accent-cyan);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: var(--space-lg);
+  padding-bottom: var(--space-sm);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.config-fields {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.config-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.config-field-header {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.config-key {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.config-desc {
+  line-height: 1.4;
+}
+
+/* Toggle */
+.toggle-label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  cursor: pointer;
+}
+
+.toggle-label input {
+  display: none;
+}
+
+.toggle-switch {
+  position: relative;
+  width: 40px;
+  height: 22px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-default);
+  border-radius: 11px;
+  transition: all var(--transition-fast);
+}
+
+.toggle-switch::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  background: var(--text-muted);
+  border-radius: 50%;
+  transition: all var(--transition-fast);
+}
+
+.toggle-label input:checked + .toggle-switch {
+  background: var(--accent-cyan);
+  border-color: var(--accent-cyan);
+}
+
+.toggle-label input:checked + .toggle-switch::after {
+  left: 20px;
+  background: white;
+}
+
+/* Presets Sidebar */
+.config-sidebar {
+  position: sticky;
+  top: calc(var(--navbar-height) + var(--space-lg));
+}
+
+.presets-card {
+  padding: var(--space-lg);
+}
+
+.presets-card h3 {
+  font-size: 0.9rem;
+  margin-bottom: var(--space-md);
+}
+
+.preset-save {
+  display: flex;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-md);
+}
+
+.preset-save .input { flex: 1; }
+
+.presets-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.preset-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.preset-name {
+  flex: 1;
+  text-align: left;
+  justify-content: flex-start;
+}
+
+.preset-delete {
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.preset-delete:hover {
+  color: var(--accent-red);
+}
+
+@media (max-width: 900px) {
+  .config-layout {
+    grid-template-columns: 1fr;
+  }
+  .config-sidebar { position: static; }
+}
