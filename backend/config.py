@@ -14,7 +14,7 @@ DATABASE_PATH = os.getenv(
 DATABASE_URL = f"sqlite:///{DATABASE_PATH}"
 
 # CORS — frontend dev server origin
-FRONTEND_URL = os.getenv("FRONTEND_URL", "https://tradingagents-frontend-q1km.onrender.com/runs/new")
+FRONTEND_URL = os.getenv("FRONTEND_URL", "https://tradingagents-frontend-q1km.onrender.com")
 
 # Backend port
 BACKEND_PORT = int(os.getenv("BACKEND_PORT", "8000"))
