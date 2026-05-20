@@ -1,0 +1,13 @@
+.auth-callback {
+  min-height: calc(100vh - var(--navbar-height));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-2xl) var(--space-lg);
+}
+
+.auth-callback-card {
+  width: min(520px, 92vw);
+  padding: var(--space-xl);
+  text-align: center;
+}
