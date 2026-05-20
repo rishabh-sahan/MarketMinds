@@ -13,15 +13,27 @@ export default function AuthCallback() {
     async function finalizeAuth() {
       const url = new URL(window.location.href);
       const code = url.searchParams.get('code');
+      const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+      const accessToken = hashParams.get('access_token');
+      const refreshToken = hashParams.get('refresh_token');
 
       if (code) {
         const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(window.location.href);
         if (exchangeError && isMounted) {
           setError(exchangeError.message || 'Unable to complete sign-in.');
         }
+      } else if (accessToken && refreshToken) {
+        const { error: sessionError } = await supabase.auth.setSession({
+          access_token: accessToken,
+          refresh_token: refreshToken,
+        });
+        if (sessionError && isMounted) {
+          setError(sessionError.message || 'Unable to complete sign-in.');
+        }
       }
 
       if (isMounted) {
+        window.history.replaceState({}, document.title, '/auth/callback');
         navigate('/dashboard', { replace: true });
       }
     }
