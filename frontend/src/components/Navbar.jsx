@@ -1,12 +1,10 @@
 import { Link, useLocation } from 'react-router-dom';
-import { useAuth } from '../hooks/useAuth';
 import ThemeToggle from './ThemeToggle';
 import './Navbar.css';
 
 export default function Navbar() {
   const location = useLocation();
   const isLanding = location.pathname === '/';
-  const { user, loading, signInWithGoogle, signOut } = useAuth();
 
   return (
     <nav className="navbar">
@@ -39,21 +37,6 @@ export default function Navbar() {
 
         <div className="navbar-actions">
           <ThemeToggle />
-          {!loading && user && (
-            <div className="auth-pill">
-              <span className="auth-email">{user.email}</span>
-            </div>
-          )}
-          {!loading && !user && (
-            <button className="btn btn-secondary btn-sm" onClick={signInWithGoogle} type="button">
-              Sign in with Google
-            </button>
-          )}
-          {!loading && user && (
-            <button className="btn btn-ghost btn-sm" onClick={signOut} type="button">
-              Sign out
-            </button>
-          )}
           {isLanding && (
             <Link to="/dashboard" className="btn btn-primary btn-sm">
               Launch Dashboard →

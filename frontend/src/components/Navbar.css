@@ -72,24 +72,6 @@
   gap: var(--space-md);
 }
 
-.auth-pill {
-  display: inline-flex;
-  align-items: center;
-  padding: 6px 12px;
-  border-radius: var(--radius-full);
-  background: var(--bg-tertiary);
-  border: 1px solid var(--border-default);
-  font-size: 0.8125rem;
-  color: var(--text-secondary);
-}
-
-.auth-email {
-  max-width: 180px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 @media (max-width: 768px) {
   .navbar-links { display: none; }
 }
