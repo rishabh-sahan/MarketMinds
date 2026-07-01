@@ -137,13 +137,6 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="landing-footer">
-        <p className="text-muted text-sm">
-          Built by <a href="https://github.com/TauricResearch" target="_blank" rel="noreferrer">Tauric Research</a> · 
-          Not financial advice · <a href="https://arxiv.org/abs/2412.20138" target="_blank" rel="noreferrer">arXiv Paper</a>
-        </p>
-      </footer>
     </div>
   );
 }
