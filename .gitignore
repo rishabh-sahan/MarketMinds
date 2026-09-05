@@ -217,3 +217,13 @@ __marimo__/
 
 # Cache
 **/data_cache/
+
+# TradingAgents runtime artifacts
+# Backend SQLite database — created on startup by create_tables()
+*.db
+*.db-journal
+*.sqlite3
+# Generated analysis reports — written per-run to a user-chosen path
+reports/
+
+Notes.txt

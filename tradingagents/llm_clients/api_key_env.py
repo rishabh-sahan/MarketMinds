@@ -18,7 +18,6 @@ PROVIDER_API_KEY_ENV: dict[str, Optional[str]] = {
     "openai":     "OPENAI_API_KEY",
     "anthropic":  "ANTHROPIC_API_KEY",
     "google":     "GOOGLE_API_KEY",
-    "azure":      "AZURE_OPENAI_API_KEY",
     "xai":        "XAI_API_KEY",
     "deepseek":   "DEEPSEEK_API_KEY",
     # Dual-region providers each carry their own account; keys are not

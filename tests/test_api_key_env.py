@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import os
-from pathlib import Path
 from unittest.mock import patch
 
 import pytest
@@ -24,7 +23,7 @@ def test_every_select_llm_provider_choice_has_an_entry():
         "qwen", "qwen-cn",
         "glm", "glm-cn",
         "minimax", "minimax-cn",
-        "openrouter", "azure", "ollama",
+        "openrouter", "ollama",
     }
     assert expected.issubset(PROVIDER_API_KEY_ENV.keys())
 
@@ -35,7 +34,6 @@ def test_every_select_llm_provider_choice_has_an_entry():
         ("openai",     "OPENAI_API_KEY"),
         ("anthropic",  "ANTHROPIC_API_KEY"),
         ("google",     "GOOGLE_API_KEY"),
-        ("azure",      "AZURE_OPENAI_API_KEY"),
         ("xai",        "XAI_API_KEY"),
         ("deepseek",   "DEEPSEEK_API_KEY"),
         ("qwen",       "DASHSCOPE_API_KEY"),

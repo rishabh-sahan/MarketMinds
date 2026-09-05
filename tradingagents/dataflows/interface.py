@@ -1,5 +1,3 @@
-from typing import Annotated
-
 # Import from vendor-specific modules
 from .y_finance import (
     get_YFin_data_online,
@@ -59,11 +57,6 @@ TOOLS_CATEGORIES = {
         ]
     }
 }
-
-VENDOR_LIST = [
-    "yfinance",
-    "alpha_vantage",
-]
 
 # Mapping of methods to their vendor-specific implementations
 VENDOR_METHODS = {

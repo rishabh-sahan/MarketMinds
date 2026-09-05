@@ -7,7 +7,7 @@ import logging
 import threading
 import traceback
 from datetime import datetime, timezone
-from typing import Dict, Any, Optional
+from typing import Optional
 
 from sqlalchemy.orm import Session
 
@@ -17,8 +17,6 @@ from backend.services.ws_manager import ws_manager
 
 logger = logging.getLogger(__name__)
 
-# Track active run threads so we can support cancellation later
-_active_runs: Dict[str, threading.Thread] = {}
 _ws_loop: Optional[asyncio.AbstractEventLoop] = None
 
 
@@ -47,19 +45,6 @@ def _build_config(run_create_data: dict) -> dict:
     config["max_risk_discuss_rounds"] = run_create_data.get("max_risk_discuss_rounds", config["max_risk_discuss_rounds"])
     config["output_language"] = run_create_data.get("output_language", config["output_language"])
     return config
-
-
-def _emit_sync(run_id: str, coro):
-    """Fire-and-forget an async WS emit from a sync thread."""
-    try:
-        loop = asyncio.get_event_loop()
-        if loop.is_running():
-            asyncio.run_coroutine_threadsafe(coro, loop)
-        else:
-            loop.run_until_complete(coro)
-    except RuntimeError:
-        # No event loop in this thread — skip WS emit
-        pass
 
 
 def _store_event(db: Session, run_id: str, agent_name: str, event_type: str, payload: dict = None):
@@ -178,7 +163,6 @@ def _run_analysis(run_id: str, ticker: str, trade_date: str, config: dict, selec
 
     finally:
         db.close()
-        _active_runs.pop(run_id, None)
 
 
 def start_run(run_id: str, ticker: str, trade_date: str, config: dict, selected_analysts: list):
@@ -190,5 +174,4 @@ def start_run(run_id: str, ticker: str, trade_date: str, config: dict, selected_
         daemon=True,
         name=f"run-{run_id[:8]}",
     )
-    _active_runs[run_id] = t
     t.start()

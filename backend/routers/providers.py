@@ -33,7 +33,6 @@ _DISPLAY_NAMES = {
     "minimax-cn": "MiniMax (China)",
     "openrouter": "OpenRouter",
     "ollama": "Ollama (Local)",
-    "azure": "Azure OpenAI",
 }
 
 

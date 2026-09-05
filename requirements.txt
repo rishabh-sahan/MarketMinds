@@ -1,1 +1,9 @@
+# Installs this project from pyproject.toml, along with its runtime
+# dependencies (langchain, langgraph, yfinance, pandas, stockstats,
+# rich, typer, and the rest). The leading "." is intentional.
+#
+# The web backend additionally needs FastAPI/uvicorn/SQLAlchemy, which
+# live in backend/requirements.txt. To install both:
+#
+#   pip install -r requirements.txt -r backend/requirements.txt
 .
