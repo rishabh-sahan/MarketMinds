@@ -175,6 +175,21 @@ MODEL_OPTIONS: ProviderModeOptions = {
             ("Custom model ID", "custom"),
         ],
     },
+    # Sarvam AI (India). The /v1 endpoint serves the native sarvam-105b
+    # family; Sarvam's open-weight models (glm5.2, gemma4, deepseekv4-flash)
+    # live on a separate /v2 path and would need their own provider entry.
+    "sarvam": {
+        "quick": [
+            ("Sarvam 105B Conversations - Tuned for real-time dialogue, 128K ctx", "sarvam-105b-conversations"),
+            ("Sarvam 105B - Flagship, 128K ctx", "sarvam-105b"),
+            ("Custom model ID", "custom"),
+        ],
+        "deep": [
+            ("Sarvam 105B - Flagship, complex reasoning and agentic tasks, 128K ctx", "sarvam-105b"),
+            ("Sarvam 105B Conversations - Dialogue-tuned variant, 128K ctx", "sarvam-105b-conversations"),
+            ("Custom model ID", "custom"),
+        ],
+    },
     "openrouter": {
         "quick": [
             ("Custom model ID", "custom"),

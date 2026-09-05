@@ -88,6 +88,7 @@ ZHIPU_API_KEY=...           # GLM via Z.AI (international)
 ZHIPU_CN_API_KEY=...        # GLM via BigModel (China)
 MINIMAX_API_KEY=...         # MiniMax — Global
 MINIMAX_CN_API_KEY=...      # MiniMax — China
+SARVAM_API_KEY=...          # Sarvam AI (India)
 OPENROUTER_API_KEY=...      # OpenRouter
 ALPHA_VANTAGE_API_KEY=...   # Alpha Vantage (optional data vendor)
 ```
@@ -165,7 +166,7 @@ Adjust the config to change provider, models, or debate depth:
 config = DEFAULT_CONFIG.copy()
 config["llm_provider"] = "openai"           # openai, google, anthropic, xai, deepseek,
                                             # qwen, qwen-cn, glm, glm-cn, minimax,
-                                            # minimax-cn, openrouter, ollama
+                                            # minimax-cn, sarvam, openrouter, ollama
 config["deep_think_llm"] = "gpt-5.4"        # complex reasoning
 config["quick_think_llm"] = "gpt-5.4-mini"  # fast tasks
 config["max_debate_rounds"] = 2

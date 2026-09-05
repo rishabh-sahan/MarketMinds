@@ -31,6 +31,7 @@ _DISPLAY_NAMES = {
     "glm-cn": "GLM / Zhipu (China)",
     "minimax": "MiniMax (Global)",
     "minimax-cn": "MiniMax (China)",
+    "sarvam": "Sarvam AI (India)",
     "openrouter": "OpenRouter",
     "ollama": "Ollama (Local)",
 }
