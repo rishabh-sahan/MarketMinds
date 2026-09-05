@@ -14,7 +14,7 @@ router = APIRouter(prefix="/api/config", tags=["config"])
 
 def _get_current_config() -> dict:
     """Return a JSON-safe copy of DEFAULT_CONFIG."""
-    from tradingagents.default_config import DEFAULT_CONFIG
+    from marketminds.default_config import DEFAULT_CONFIG
     # Filter out non-serializable values
     safe = {}
     for k, v in DEFAULT_CONFIG.items():
@@ -32,7 +32,7 @@ def get_config():
 @router.put("", response_model=ConfigResponse)
 def update_config(body: ConfigUpdate):
     """Update DEFAULT_CONFIG in-memory (non-persistent — for current session only)."""
-    from tradingagents.default_config import DEFAULT_CONFIG
+    from marketminds.default_config import DEFAULT_CONFIG
     for key, value in body.config.items():
         if key in DEFAULT_CONFIG:
             DEFAULT_CONFIG[key] = value

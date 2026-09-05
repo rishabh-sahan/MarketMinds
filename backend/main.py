@@ -6,7 +6,7 @@ import sys
 import os
 from contextlib import asynccontextmanager
 
-# Ensure the project root is on sys.path so `tradingagents` and `backend` are importable
+# Ensure the project root is on sys.path so `marketminds` and `backend` are importable
 _project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 if _project_root not in sys.path:
     sys.path.insert(0, _project_root)
@@ -33,8 +33,8 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="TradingAgents API",
-    description="REST + WebSocket API for the TradingAgents multi-agent trading framework",
+    title="MarketMinds API",
+    description="REST + WebSocket API for the MarketMinds multi-agent trading framework",
     version="0.1.0",
     lifespan=lifespan,
 )
@@ -57,4 +57,4 @@ app.include_router(ws_router)
 
 @app.get("/api/health")
 def health():
-    return {"status": "ok", "service": "tradingagents-api"}
+    return {"status": "ok", "service": "marketminds-api"}

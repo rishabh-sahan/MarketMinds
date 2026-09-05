@@ -153,7 +153,7 @@ export default function ConfigEditor() {
       <div className="page-header">
         <div>
           <h1>Configuration</h1>
-          <p className="text-muted">Edit runtime settings for the TradingAgents framework</p>
+          <p className="text-muted">Edit runtime settings for the MarketMinds framework</p>
         </div>
         <div className="flex gap-sm">
           <button className="btn btn-primary" onClick={handleSave} disabled={saving}>

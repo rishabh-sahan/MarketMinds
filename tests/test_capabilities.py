@@ -2,7 +2,7 @@
 
 import pytest
 
-from tradingagents.llm_clients.capabilities import get_capabilities
+from marketminds.llm_clients.capabilities import get_capabilities
 
 
 @pytest.mark.unit

@@ -1,4 +1,4 @@
-"""Run service — spawns TradingAgentsGraph in a background thread and streams events."""
+"""Run service — spawns MarketMindsGraph in a background thread and streams events."""
 
 from __future__ import annotations
 
@@ -34,8 +34,8 @@ def _get_ws_loop() -> asyncio.AbstractEventLoop:
 
 
 def _build_config(run_create_data: dict) -> dict:
-    """Build a TradingAgents config dict from the run creation request."""
-    from tradingagents.default_config import DEFAULT_CONFIG
+    """Build a MarketMinds config dict from the run creation request."""
+    from marketminds.default_config import DEFAULT_CONFIG
 
     config = DEFAULT_CONFIG.copy()
     config["llm_provider"] = run_create_data.get("llm_provider", config["llm_provider"])
@@ -60,7 +60,7 @@ def _store_event(db: Session, run_id: str, agent_name: str, event_type: str, pay
 
 
 def _run_analysis(run_id: str, ticker: str, trade_date: str, config: dict, selected_analysts: list, loop: asyncio.AbstractEventLoop):
-    """Execute the TradingAgents pipeline (runs in a background thread)."""
+    """Execute the MarketMinds pipeline (runs in a background thread)."""
     db = SessionLocal()
     try:
         # Mark as running
@@ -78,14 +78,14 @@ def _run_analysis(run_id: str, ticker: str, trade_date: str, config: dict, selec
         )
 
         # Import here to avoid circular imports and keep startup fast
-        from tradingagents.graph.trading_graph import TradingAgentsGraph
+        from marketminds.graph.trading_graph import MarketMindsGraph
 
         asyncio.run_coroutine_threadsafe(
-            ws_manager.emit_log(run_id, "Initializing TradingAgentsGraph..."),
+            ws_manager.emit_log(run_id, "Initializing MarketMindsGraph..."),
             loop,
         )
 
-        ta = TradingAgentsGraph(
+        ta = MarketMindsGraph(
             selected_analysts=selected_analysts,
             debug=True,
             config=config,

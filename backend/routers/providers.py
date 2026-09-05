@@ -40,7 +40,7 @@ _DISPLAY_NAMES = {
 @router.get("", response_model=list[ProviderListItem])
 def list_providers():
     """List all supported LLM providers."""
-    from tradingagents.llm_clients.api_key_env import PROVIDER_API_KEY_ENV
+    from marketminds.llm_clients.api_key_env import PROVIDER_API_KEY_ENV
 
     providers = []
     for name, env_var in PROVIDER_API_KEY_ENV.items():
@@ -91,7 +91,7 @@ def _fetch_openrouter_models() -> List[ModelOption]:
 @router.get("/{provider_name}/models", response_model=ProviderModels)
 def get_provider_models(provider_name: str):
     """Get available models for a provider."""
-    from tradingagents.llm_clients.model_catalog import MODEL_OPTIONS
+    from marketminds.llm_clients.model_catalog import MODEL_OPTIONS
 
     provider = provider_name.lower()
     if provider == "openrouter":

@@ -218,7 +218,7 @@ __marimo__/
 # Cache
 **/data_cache/
 
-# TradingAgents runtime artifacts
+# MarketMinds runtime artifacts
 # Backend SQLite database — created on startup by create_tables()
 *.db
 *.db-journal

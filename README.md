@@ -1,4 +1,4 @@
-# TradingAgents
+# MarketMinds
 
 A multi-agent LLM trading research platform. Specialised agents — analysts, researchers, a trader, and a risk committee — collaborate and debate their way to a position rating on a given ticker and date.
 
@@ -93,7 +93,25 @@ OPENROUTER_API_KEY=...      # OpenRouter
 ALPHA_VANTAGE_API_KEY=...   # Alpha Vantage (optional data vendor)
 ```
 
-Only the key for your chosen provider is required. For local models set `llm_provider: "ollama"` — the default endpoint is `http://localhost:11434/v1`, or point `OLLAMA_BASE_URL` at a remote `ollama serve`. Pull models with `ollama pull <name>` and pick "Custom model ID" in the CLI for anything not in the dropdown.
+Only the key for your chosen provider is required.
+
+#### Reddit sentiment (optional)
+
+Reddit blocks **all** unauthenticated API traffic, so the Sentiment Analyst
+skips Reddit unless OAuth credentials are present (news and StockTwits still
+work without them). To enable it, create a **script** app at
+[reddit.com/prefs/apps](https://www.reddit.com/prefs/apps) — any redirect URI
+works — then add:
+
+```bash
+REDDIT_CLIENT_ID=your_client_id
+REDDIT_CLIENT_SECRET=your_client_secret
+REDDIT_USER_AGENT=python:marketminds:v0.2 (by /u/your_username)
+```
+
+Authentication uses the `client_credentials` grant, so no Reddit password is
+needed. Authenticated clients get ~100 requests/minute, comfortably covering
+the full subreddit sweep. For local models set `llm_provider: "ollama"` — the default endpoint is `http://localhost:11434/v1`, or point `OLLAMA_BASE_URL` at a remote `ollama serve`. Pull models with `ollama pull <name>` and pick "Custom model ID" in the CLI for anything not in the dropdown.
 
 ---
 
@@ -114,7 +132,7 @@ npm run dev
 
 The UI is then at `http://localhost:5173` and talks to the API on port 8000 (CORS for the Vite dev origin is already configured). Override with `VITE_API_BASE` and `VITE_WS_BASE` if you move either port.
 
-Runs execute in a background thread and stream progress over a WebSocket at `/ws/runs/{run_id}`. History and results are stored in SQLite at `backend/tradingagents.db` — override with `TRADINGAGENTS_DB_PATH`.
+Runs execute in a background thread and stream progress over a WebSocket at `/ws/runs/{run_id}`. History and results are stored in SQLite at `backend/marketminds.db` — override with `MARKETMINDS_DB_PATH`.
 
 Note: `--reload` restarts the server when you save a file, which kills any in-flight analysis. Drop it when running a full analysis, since those take several minutes.
 
@@ -135,15 +153,15 @@ Note: `--reload` restarts the server when you save a file, which kills any in-fl
 ## Running the CLI
 
 ```bash
-tradingagents          # installed console script
+marketminds          # installed console script
 python -m cli.main     # or run directly from source
 ```
 
 You'll be prompted for ticker, analysis date, LLM provider, model tier, research depth, and output language. A live terminal dashboard then tracks each agent's status, tool calls, token usage, and reports as they complete. At the end you can save the full report to disk as per-section markdown files plus a combined `complete_report.md`.
 
 ```bash
-tradingagents --checkpoint           # enable checkpoint resume for this run
-tradingagents --clear-checkpoints    # reset all checkpoints before running
+marketminds --checkpoint           # enable checkpoint resume for this run
+marketminds --clear-checkpoints    # reset all checkpoints before running
 ```
 
 ---
@@ -151,10 +169,10 @@ tradingagents --clear-checkpoints    # reset all checkpoints before running
 ## Python usage
 
 ```python
-from tradingagents.graph.trading_graph import TradingAgentsGraph
-from tradingagents.default_config import DEFAULT_CONFIG
+from marketminds.graph.trading_graph import MarketMindsGraph
+from marketminds.default_config import DEFAULT_CONFIG
 
-ta = TradingAgentsGraph(debug=True, config=DEFAULT_CONFIG.copy())
+ta = MarketMindsGraph(debug=True, config=DEFAULT_CONFIG.copy())
 
 final_state, decision = ta.propagate("NVDA", "2026-01-15")
 print(decision)
@@ -171,32 +189,32 @@ config["deep_think_llm"] = "gpt-5.4"        # complex reasoning
 config["quick_think_llm"] = "gpt-5.4-mini"  # fast tasks
 config["max_debate_rounds"] = 2
 
-ta = TradingAgentsGraph(debug=True, config=config)
+ta = MarketMindsGraph(debug=True, config=config)
 _, decision = ta.propagate("NVDA", "2026-01-15")
 ```
 
 You can also select a subset of analysts:
 
 ```python
-ta = TradingAgentsGraph(selected_analysts=["market", "fundamentals"], config=config)
+ta = MarketMindsGraph(selected_analysts=["market", "fundamentals"], config=config)
 ```
 
 ### Configuration
 
-All options live in `tradingagents/default_config.py`. Any of these can be set via environment variable without editing code — values are coerced to the type of the existing default:
+All options live in `marketminds/default_config.py`. Any of these can be set via environment variable without editing code — values are coerced to the type of the existing default:
 
 | Variable | Sets |
 | --- | --- |
-| `TRADINGAGENTS_LLM_PROVIDER` | LLM provider |
-| `TRADINGAGENTS_DEEP_THINK_LLM` | Deep-thinking model |
-| `TRADINGAGENTS_QUICK_THINK_LLM` | Quick-thinking model |
-| `TRADINGAGENTS_LLM_BACKEND_URL` | Custom API endpoint |
-| `TRADINGAGENTS_OUTPUT_LANGUAGE` | Report language |
-| `TRADINGAGENTS_MAX_DEBATE_ROUNDS` | Bull/bear rounds |
-| `TRADINGAGENTS_MAX_RISK_ROUNDS` | Risk committee rounds |
-| `TRADINGAGENTS_CHECKPOINT_ENABLED` | Checkpoint resume |
-| `TRADINGAGENTS_BENCHMARK_TICKER` | Alpha benchmark override |
-| `TRADINGAGENTS_RESULTS_DIR` · `TRADINGAGENTS_CACHE_DIR` · `TRADINGAGENTS_MEMORY_LOG_PATH` | Storage paths |
+| `MARKETMINDS_LLM_PROVIDER` | LLM provider |
+| `MARKETMINDS_DEEP_THINK_LLM` | Deep-thinking model |
+| `MARKETMINDS_QUICK_THINK_LLM` | Quick-thinking model |
+| `MARKETMINDS_LLM_BACKEND_URL` | Custom API endpoint |
+| `MARKETMINDS_OUTPUT_LANGUAGE` | Report language |
+| `MARKETMINDS_MAX_DEBATE_ROUNDS` | Bull/bear rounds |
+| `MARKETMINDS_MAX_RISK_ROUNDS` | Risk committee rounds |
+| `MARKETMINDS_CHECKPOINT_ENABLED` | Checkpoint resume |
+| `MARKETMINDS_BENCHMARK_TICKER` | Alpha benchmark override |
+| `MARKETMINDS_RESULTS_DIR` · `MARKETMINDS_CACHE_DIR` · `MARKETMINDS_MEMORY_LOG_PATH` | Storage paths |
 
 ### Data vendors
 
@@ -217,22 +235,22 @@ config["data_vendors"] = {
 
 ### Decision log
 
-Always on. Each completed run appends its decision to `~/.tradingagents/memory/trading_memory.md` as a pending entry. On the next run for the same ticker, the realised return is fetched (raw, plus alpha against a benchmark), a short reflection is generated, and the most recent same-ticker decisions plus recent cross-ticker lessons are injected into the Portfolio Manager's prompt — so each analysis carries forward what worked and what didn't.
+Always on. Each completed run appends its decision to `~/.marketminds/memory/trading_memory.md` as a pending entry. On the next run for the same ticker, the realised return is fetched (raw, plus alpha against a benchmark), a short reflection is generated, and the most recent same-ticker decisions plus recent cross-ticker lessons are injected into the Portfolio Manager's prompt — so each analysis carries forward what worked and what didn't.
 
-The alpha benchmark is chosen from the ticker's exchange suffix — `^NSEI` for `.NS`, `^N225` for `.T`, `^FTSE` for `.L`, SPY for US listings, and so on. Override globally with `TRADINGAGENTS_BENCHMARK_TICKER`.
+The alpha benchmark is chosen from the ticker's exchange suffix — `^NSEI` for `.NS`, `^N225` for `.T`, `^FTSE` for `.L`, SPY for US listings, and so on. Override globally with `MARKETMINDS_BENCHMARK_TICKER`.
 
 ### Checkpoint resume
 
 Opt-in via `--checkpoint`. LangGraph saves state after each node, so an interrupted run resumes from the last successful step instead of starting over. You'll see `Resuming from step N` in the logs on a resume, or `Starting fresh` otherwise. Checkpoints clear automatically on success.
 
-Per-ticker SQLite databases live at `~/.tradingagents/cache/checkpoints/<TICKER>.db`.
+Per-ticker SQLite databases live at `~/.marketminds/cache/checkpoints/<TICKER>.db`.
 
 ---
 
 ## Project layout
 
 ```
-tradingagents/          Core framework
+marketminds/          Core framework
   agents/               Agent definitions, prompts, tools, schemas
   dataflows/            Data vendors (yfinance, Alpha Vantage, Reddit, StockTwits)
   graph/                LangGraph setup, routing, propagation, reflection

@@ -23,7 +23,7 @@ export default function Navbar() {
               </defs>
             </svg>
           </div>
-          <span className="logo-text">TradingAgents</span>
+          <span className="logo-text">MarketMinds</span>
         </Link>
 
         {!isLanding && (

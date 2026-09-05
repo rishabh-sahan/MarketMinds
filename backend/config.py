@@ -8,8 +8,8 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
 # SQLite database — stored alongside the project for easy dev setup
 DATABASE_PATH = os.getenv(
-    "TRADINGAGENTS_DB_PATH",
-    str(PROJECT_ROOT / "backend" / "tradingagents.db"),
+    "MARKETMINDS_DB_PATH",
+    str(PROJECT_ROOT / "backend" / "marketminds.db"),
 )
 DATABASE_URL = f"sqlite:///{DATABASE_PATH}"
 

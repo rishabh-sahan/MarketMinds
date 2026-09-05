@@ -17,11 +17,14 @@ from __future__ import annotations
 
 import pytest
 
-import tradingagents.llm_clients.openai_client as openai_client
-from tradingagents.llm_clients.api_key_env import get_api_key_env
-from tradingagents.llm_clients.factory import create_llm_client
-from tradingagents.llm_clients.model_catalog import MODEL_OPTIONS, get_known_models
-from tradingagents.llm_clients.validators import validate_model
+import marketminds.llm_clients.openai_client as openai_client
+from marketminds.agents.schemas import PortfolioDecision
+from marketminds.agents.utils.structured import bind_structured
+from marketminds.llm_clients.api_key_env import get_api_key_env
+from marketminds.llm_clients.capabilities import get_capabilities
+from marketminds.llm_clients.factory import create_llm_client
+from marketminds.llm_clients.model_catalog import MODEL_OPTIONS, get_known_models
+from marketminds.llm_clients.validators import validate_model
 
 
 @pytest.mark.unit
@@ -86,3 +89,28 @@ class TestSarvamCatalog:
 
     def test_unknown_model_is_rejected(self):
         assert not validate_model("sarvam", "not-a-real-sarvam-model")
+
+
+@pytest.mark.unit
+class TestSarvamStructuredOutput:
+    """sarvam-105b returns a null parse from with_structured_output, so the
+    capability table declares 'none' and the agents skip straight to free
+    text instead of burning a call that cannot succeed."""
+
+    @pytest.mark.parametrize("model", ["sarvam-105b", "sarvam-105b-conversations"])
+    def test_structured_method_is_none(self, model):
+        assert get_capabilities(model).preferred_structured_method == "none"
+
+    def test_future_sarvam_models_inherit_via_pattern(self):
+        assert get_capabilities("sarvam-200b-next").preferred_structured_method == "none"
+
+    def test_with_structured_output_raises_not_implemented(self, monkeypatch):
+        monkeypatch.setenv("SARVAM_API_KEY", "sk_test_placeholder")
+        llm = openai_client.OpenAIClient("sarvam-105b", provider="sarvam").get_llm()
+        with pytest.raises(NotImplementedError):
+            llm.with_structured_output(PortfolioDecision)
+
+    def test_bind_structured_returns_none_so_no_call_is_wasted(self, monkeypatch):
+        monkeypatch.setenv("SARVAM_API_KEY", "sk_test_placeholder")
+        llm = openai_client.OpenAIClient("sarvam-105b", provider="sarvam").get_llm()
+        assert bind_structured(llm, PortfolioDecision, "Portfolio Manager") is None
