@@ -1,142 +1,238 @@
-import { Link } from 'react-router-dom';
-import './Landing.css';
-
-const FEATURES = [
-  {
-    icon: '📊',
-    title: 'Market Analysis',
-    desc: 'Technical indicators, MACD, RSI, Bollinger Bands — analyzed by an AI Market Analyst in real time.',
-    color: 'cyan',
-  },
-  {
-    icon: '💬',
-    title: 'Sentiment Intelligence',
-    desc: 'Aggregates StockTwits, Reddit, and news headlines into a unified sentiment read.',
-    color: 'purple',
-  },
-  {
-    icon: '📰',
-    title: 'News & Macro',
-    desc: 'Monitors global events — Fed rates, GDP, geopolitics — and interprets their market impact.',
-    color: 'cyan',
-  },
-  {
-    icon: '📈',
-    title: 'Fundamentals Deep Dive',
-    desc: 'Balance sheets, cash flow, income statements — the financial health of any company.',
-    color: 'purple',
-  },
-  {
-    icon: '⚔️',
-    title: 'Bull vs Bear Debate',
-    desc: 'Two AI researchers argue for and against the stock, judged by a Research Manager.',
-    color: 'cyan',
-  },
-  {
-    icon: '🛡️',
-    title: 'Risk Management',
-    desc: 'Aggressive, conservative, and neutral risk analysts debate to stress-test every decision.',
-    color: 'purple',
-  },
-];
-
-const PIPELINE_STEPS = [
-  { num: 'I', title: 'Analyst Team', agents: '4 Analysts', desc: 'Market, Sentiment, News, Fundamentals' },
-  { num: 'II', title: 'Research Team', agents: '3 Researchers', desc: 'Bull/Bear Debate + Manager' },
-  { num: 'III', title: 'Trader', agents: '1 Trader', desc: 'Concrete Transaction Proposal' },
-  { num: 'IV', title: 'Risk Team', agents: '3 Analysts', desc: 'Aggressive/Conservative/Neutral' },
-  { num: 'V', title: 'Portfolio Manager', agents: 'Final Decision', desc: 'Buy / Hold / Sell' },
-];
+import { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { classNames as cx } from '../lib/format';
+import { ANALYSTS, PHASES, PHASE_BLURBS, PIPELINE } from '../lib/pipeline';
+import { Logo, ThemeToggle } from '../components/layout/AppShell';
+import { Button, Icon } from '../components/ui';
 
 export default function Landing() {
+  const navigate = useNavigate();
+  const [ticker, setTicker] = useState('');
+
+  const start = (e) => {
+    e.preventDefault();
+    const symbol = ticker.trim().toUpperCase();
+    // Carry the typed symbol through so the run form opens pre-filled.
+    navigate(symbol ? `/runs/new?ticker=${encodeURIComponent(symbol)}` : '/runs/new');
+  };
+
   return (
-    <div className="landing">
-      {/* Hero */}
-      <section className="hero">
-        <div className="hero-bg-glow" />
-        <div className="hero-content animate-fade-in">
-          <div className="hero-badge">
-            <span className="badge-dot" />
-            Open Source · v0.2.5
+    <div className="min-h-screen bg-bg">
+      {/* ------------------------------------------------------------- nav */}
+      <header className="sticky top-0 z-20 border-b border-line bg-bg/85 backdrop-blur-md">
+        <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-5">
+          <Logo />
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
+            <Button as={Link} to="/dashboard" variant="primary" size="sm" iconRight="arrowRight">
+              Open the desk
+            </Button>
           </div>
-          <h1 className="hero-title">
-            Multi-Agent AI<br />
-            <span className="text-gradient">Trading Framework</span>
+        </div>
+      </header>
+
+      {/* ------------------------------------------------------------ hero */}
+      <section className="mx-auto max-w-6xl px-5 pt-16 pb-14 sm:pt-24 sm:pb-20">
+        <div className="mx-auto max-w-2xl text-center">
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-accent-border bg-accent-soft px-3 py-1 text-[12px] font-medium text-accent-text">
+            <Icon name="spark" size={12} />
+            Twelve agents, one call on Indian equities
+          </span>
+
+          <h1 className="mt-5 text-[38px] leading-[1.08] font-semibold tracking-[-0.03em] text-ink sm:text-[52px]">
+            A research desk that
+            <br />
+            <span className="text-accent">argues with itself.</span>
           </h1>
-          <p className="hero-subtitle">
-            12 specialized LLM agents collaborate like a real trading firm — analysts, researchers,
-            traders, and risk managers — to deliver actionable Buy / Hold / Sell decisions.
+
+          <p className="mx-auto mt-5 max-w-xl text-[15px] leading-relaxed text-ink-secondary sm:text-[16px]">
+            Built for the NSE and BSE. Four analysts gather evidence with their own tools — price
+            action against the Nifty, RBI and SEBI policy, Indian media coverage, and the exchange
+            filings. A bull and a bear fight over it, a trader turns the verdict into a proposal,
+            and a risk committee tears into that before a portfolio manager issues the final rating
+            in rupees.
           </p>
-          <div className="hero-actions">
-            <Link to="/dashboard" className="btn btn-primary btn-lg">
-              Launch Dashboard →
-            </Link>
-            <Link to="/runs/new" className="btn btn-secondary btn-lg">
-              Start Analysis
-            </Link>
-          </div>
-          <div className="hero-stats">
-            <div className="hero-stat">
-              <span className="stat-value">12</span>
-              <span className="stat-label">AI Agents</span>
-            </div>
-            <div className="stat-divider" />
-            <div className="hero-stat">
-              <span className="stat-value">14+</span>
-              <span className="stat-label">LLM Providers</span>
-            </div>
-            <div className="stat-divider" />
-            <div className="hero-stat">
-              <span className="stat-value">5</span>
-              <span className="stat-label">Analysis Phases</span>
-            </div>
-          </div>
+
+          <form onSubmit={start} className="mx-auto mt-8 flex max-w-md gap-2">
+            <input
+              value={ticker}
+              onChange={(e) => setTicker(e.target.value.toUpperCase())}
+              placeholder="Enter an NSE ticker — RELIANCE"
+              aria-label="Ticker symbol"
+              className={cx(
+                'h-11 flex-1 rounded-xl border border-line bg-surface px-4 font-mono text-[14px]',
+                'text-ink shadow-sm placeholder:font-sans placeholder:text-ink-muted',
+                'transition-colors hover:border-line-strong focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none',
+              )}
+            />
+            <Button type="submit" variant="primary" size="lg" iconRight="arrowRight">
+              Analyse
+            </Button>
+          </form>
+
+          <p className="mt-3 text-[12px] text-ink-muted">
+            Research and educational use only. Not financial advice.
+          </p>
         </div>
       </section>
 
-      {/* Pipeline */}
-      <section className="pipeline-section">
-        <h2 className="section-title">How It <span className="text-gradient">Works</span></h2>
-        <p className="section-subtitle text-muted">Five phases, twelve agents, one decision.</p>
-        <div className="pipeline">
-          {PIPELINE_STEPS.map((step, i) => (
-            <div key={i} className="pipeline-step glass-card">
-              <div className="step-num">{step.num}</div>
-              <h3>{step.title}</h3>
-              <span className="step-agents">{step.agents}</span>
-              <p className="text-muted text-sm">{step.desc}</p>
-              {i < PIPELINE_STEPS.length - 1 && <div className="step-arrow">→</div>}
+      {/* -------------------------------------------------------- pipeline */}
+      <section className="border-y border-line bg-surface">
+        <div className="mx-auto max-w-6xl px-5 py-14 sm:py-16">
+          <div className="mb-9 max-w-xl">
+            <h2 className="text-[22px] font-semibold tracking-[-0.02em] text-ink">
+              How a rating gets made
+            </h2>
+            <p className="mt-2 text-[14px] leading-relaxed text-ink-secondary">
+              A LangGraph state machine. Each analyst loops with its own tools until it can write a
+              report; the reports feed a structured debate, and the debate feeds the decision.
+            </p>
+          </div>
+
+          <ol className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+            {PHASES.map((phase, i) => {
+              const agents = PIPELINE.filter((a) => a.phase === phase);
+              return (
+                <li
+                  key={phase}
+                  className="relative rounded-xl border border-line bg-bg p-4 transition-shadow hover:shadow-md"
+                >
+                  <span className="font-mono text-[11px] text-ink-muted">
+                    {String(i + 1).padStart(2, '0')}
+                  </span>
+                  <h3 className="mt-1 text-[14px] font-semibold text-ink">{phase}</h3>
+                  <p className="mt-1 text-[12.5px] leading-snug text-ink-muted">
+                    {PHASE_BLURBS[phase]}
+                  </p>
+
+                  <ul className="mt-3 space-y-1.5 border-t border-line pt-3">
+                    {agents.map((agent) => (
+                      <li key={agent.agent} className="flex items-center gap-2">
+                        <Icon name={agent.icon} size={13} className="shrink-0 text-accent" />
+                        <span className="truncate text-[12px] text-ink-secondary">
+                          {agent.agent}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </li>
+              );
+            })}
+          </ol>
+        </div>
+      </section>
+
+      {/* --------------------------------------------------------- analysts */}
+      <section className="mx-auto max-w-6xl px-5 py-14 sm:py-16">
+        <div className="mb-8 max-w-xl">
+          <h2 className="text-[22px] font-semibold tracking-[-0.02em] text-ink">
+            The analyst team
+          </h2>
+          <p className="mt-2 text-[14px] leading-relaxed text-ink-secondary">
+            Pick any combination. Each one reads different evidence, and the debate downstream is
+            only as good as what they bring to it.
+          </p>
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-2">
+          {ANALYSTS.map((analyst) => (
+            <div
+              key={analyst.key}
+              className="flex items-start gap-3.5 rounded-xl border border-line bg-surface p-5 shadow-sm"
+            >
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-accent-border bg-accent-soft text-accent">
+                <Icon name={analyst.icon} size={17} />
+              </span>
+              <div className="min-w-0">
+                <h3 className="text-[14px] font-semibold text-ink">{analyst.agent}</h3>
+                <p className="mt-1 text-[13px] leading-relaxed text-ink-secondary">
+                  {analyst.blurb}
+                </p>
+              </div>
             </div>
           ))}
         </div>
       </section>
 
-      {/* Features */}
-      <section className="features-section">
-        <h2 className="section-title">Powered by <span className="text-gradient">Intelligence</span></h2>
-        <p className="section-subtitle text-muted">Every angle covered, every risk debated.</p>
-        <div className="features-grid stagger-children">
-          {FEATURES.map((f, i) => (
-            <div key={i} className={`feature-card glass-card`}>
-              <div className={`feature-icon ${f.color}`}>{f.icon}</div>
-              <h3>{f.title}</h3>
-              <p className="text-muted text-sm">{f.desc}</p>
-            </div>
-          ))}
+      {/* -------------------------------------------------------- features */}
+      <section className="border-t border-line bg-surface">
+        <div className="mx-auto max-w-6xl px-5 py-14 sm:py-16">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {[
+              {
+                icon: 'activity',
+                title: 'Watch it think',
+                body: 'Every agent transition and tool call streams over a WebSocket, with reports appearing the moment they are written.',
+              },
+              {
+                icon: 'memory',
+                title: 'It remembers',
+                body: 'Each call is logged, then resolved against real prices and benchmark alpha on the next run — and the reflection feeds the next decision.',
+              },
+              {
+                icon: 'cpu',
+                title: 'Fourteen providers',
+                body: 'OpenAI, Anthropic, Google, xAI, DeepSeek, Qwen, GLM, MiniMax, Sarvam, OpenRouter, or a local Ollama runtime.',
+              },
+              {
+                icon: 'scale',
+                title: 'Tunable depth',
+                body: 'Set how many rounds the bull and bear trade, and how long the risk committee argues, per run.',
+              },
+              {
+                icon: 'news',
+                title: 'Full audit trail',
+                body: 'Every analyst report, both sides of each debate, and the timeline of the run — exportable as one markdown document.',
+              },
+              {
+                icon: 'layers',
+                title: 'Indian sources, no keys',
+                body: 'Google News India, Economic Times, Moneycontrol, Mint, Business Standard and Hindu BusinessLine, plus NSE corporate filings — all free.',
+              },
+              {
+                icon: 'target',
+                title: 'Five-tier ratings',
+                body: 'Buy, Overweight, Hold, Underweight or Sell, with a thesis, an executive summary, and a rupee price target.',
+              },
+            ].map((feature) => (
+              <div key={feature.title} className="rounded-xl border border-line bg-bg p-5">
+                <Icon name={feature.icon} size={18} className="text-accent" />
+                <h3 className="mt-3 text-[14px] font-semibold text-ink">{feature.title}</h3>
+                <p className="mt-1.5 text-[13px] leading-relaxed text-ink-secondary">
+                  {feature.body}
+                </p>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
 
-      {/* CTA */}
-      <section className="cta-section">
-        <div className="cta-card glass-card">
-          <h2>Ready to Analyze?</h2>
-          <p className="text-muted">Pick a ticker, choose your LLM, and let the agents work.</p>
-          <Link to="/runs/new" className="btn btn-primary btn-lg">
-            Start Your First Run →
-          </Link>
+      {/* ------------------------------------------------------------- cta */}
+      <section className="mx-auto max-w-6xl px-5 py-16 sm:py-20">
+        <div className="rounded-2xl border border-line bg-surface px-6 py-12 text-center shadow-sm sm:px-12">
+          <h2 className="text-[26px] font-semibold tracking-[-0.02em] text-ink">
+            Put a ticker in front of the desk
+          </h2>
+          <p className="mx-auto mt-2.5 max-w-md text-[14px] leading-relaxed text-ink-secondary">
+            A full run takes a few minutes. You will see every argument that produced the rating.
+          </p>
+          <div className="mt-6 flex flex-wrap justify-center gap-2.5">
+            <Button as={Link} to="/runs/new" variant="primary" size="lg" icon="play">
+              Start an analysis
+            </Button>
+            <Button as={Link} to="/dashboard" size="lg" iconRight="arrowRight">
+              View the dashboard
+            </Button>
+          </div>
         </div>
       </section>
 
+      <footer className="border-t border-line">
+        <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-3 px-5 py-6 text-[12.5px] text-ink-muted sm:flex-row">
+          <Logo size="sm" />
+          <p>Research and educational use only. Output is not financial advice.</p>
+        </div>
+      </footer>
     </div>
   );
 }

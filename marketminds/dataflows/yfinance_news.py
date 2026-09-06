@@ -60,7 +60,7 @@ def get_news_yfinance(
     Retrieve news for a specific stock ticker using yfinance.
 
     Args:
-        ticker: Stock ticker symbol (e.g., "AAPL")
+        ticker: Stock ticker symbol (e.g., "RELIANCE.NS")
         start_date: Start date in yyyy-mm-dd format
         end_date: End date in yyyy-mm-dd format
 
@@ -131,7 +131,16 @@ def get_global_news_yfinance(
         look_back_days = config["global_news_lookback_days"]
     if limit is None:
         limit = config["global_news_article_limit"]
-    search_queries = config["global_news_queries"]
+
+    # This vendor path is only a fallback: the Indian macro brief in
+    # `india_news` is the primary source. Queries default to the Indian macro
+    # themes so the fallback covers the same ground, and `.get` keeps it
+    # working for a caller that still pins its own query list in config.
+    search_queries = config.get("global_news_queries")
+    if not search_queries:
+        from .india_news import MACRO_TOPICS
+
+        search_queries = list(MACRO_TOPICS.values())
 
     all_news = []
     seen_titles = set()

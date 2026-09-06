@@ -5,7 +5,7 @@ import os
 from pathlib import Path
 import json
 from datetime import datetime, timedelta
-from typing import Dict, Any, Tuple, List, Optional
+from typing import Callable, Dict, Any, Tuple, List, Optional
 
 import yfinance as yf
 
@@ -30,7 +30,8 @@ from marketminds.agents.utils.agent_utils import (
     get_income_statement,
     get_news,
     get_insider_transactions,
-    get_global_news
+    get_global_news,
+    get_market_context,
 )
 
 from .checkpointer import checkpoint_step, clear_checkpoint, get_checkpointer, thread_id
@@ -50,6 +51,7 @@ class MarketMindsGraph:
         debug=False,
         config: Dict[str, Any] = None,
         callbacks: Optional[List] = None,
+        on_chunk: Optional[Callable[[Dict[str, Any]], None]] = None,
     ):
         """Initialize the trading agents graph and components.
 
@@ -58,10 +60,16 @@ class MarketMindsGraph:
             debug: Whether to run in debug mode
             config: Configuration dictionary. If None, uses default config
             callbacks: Optional list of callback handlers (e.g., for tracking LLM/tool stats)
+            on_chunk: Optional callable invoked with each per-node state delta as
+                the graph streams. Lets an embedding application (the web backend)
+                observe progress live without reimplementing propagate()'s
+                memory-log and reflection semantics. Raising from inside the
+                callback aborts the run, which is how cancellation is signalled.
         """
         self.debug = debug
         self.config = config or DEFAULT_CONFIG
         self.callbacks = callbacks or []
+        self.on_chunk = on_chunk
 
         # Update the interface's config
         set_config(self.config)
@@ -157,6 +165,9 @@ class MarketMindsGraph:
                     get_stock_data,
                     # Technical indicators
                     get_indicators,
+                    # Index, sector, currency and commodity backdrop, so a
+                    # single stock's move is read against its own market.
+                    get_market_context,
                 ]
             ),
             "social": ToolNode(
@@ -167,10 +178,12 @@ class MarketMindsGraph:
             ),
             "news": ToolNode(
                 [
-                    # News and insider information
+                    # Company news, Indian macro/policy/sector brief, and
+                    # insider activity plus exchange filings
                     get_news,
                     get_global_news,
                     get_insider_transactions,
+                    get_market_context,
                 ]
             ),
             "fundamentals": ToolNode(
@@ -185,29 +198,29 @@ class MarketMindsGraph:
         }
 
     def _resolve_benchmark(self, ticker: str) -> str:
-        """Pick the benchmark ticker for alpha calculation against ``ticker``.
+        """Pick the alpha benchmark for ``ticker``.
 
-        ``config["benchmark_ticker"]`` overrides everything when set; otherwise
-        the suffix map matches the ticker's exchange suffix (e.g. ``.T`` for
-        Tokyo). US-listed tickers without a dotted suffix fall through to the
-        empty-suffix entry (SPY by default). Unrecognised suffixes (including
-        US tickers with dots like ``BRK.B``) also fall back to the empty-suffix
-        entry, which is the right default because the alpha calculation works
-        in USD.
+        ``config["benchmark_ticker"]`` overrides everything when set — useful
+        for measuring a bank against the Nifty Bank rather than the Nifty 50.
+        Otherwise the exchange suffix decides: NSE listings are measured
+        against the Nifty 50 and BSE listings against the Sensex. Bare names
+        resolve to NSE, so they take the Nifty 50 too.
         """
         explicit = self.config.get("benchmark_ticker")
         if explicit:
             return explicit
+
+        from marketminds.dataflows.india import DEFAULT_BENCHMARK, split_suffix
+
+        _, suffix = split_suffix(ticker)
         benchmark_map = self.config.get("benchmark_map", {})
-        ticker_upper = ticker.upper()
-        for suffix, benchmark in benchmark_map.items():
-            if suffix and ticker_upper.endswith(suffix.upper()):
-                return benchmark
-        return benchmark_map.get("", "SPY")
+        if suffix and suffix in benchmark_map:
+            return benchmark_map[suffix]
+        return benchmark_map.get("", DEFAULT_BENCHMARK)
 
     def _fetch_returns(
         self, ticker: str, trade_date: str, holding_days: int = 5,
-        benchmark: str = "SPY",
+        benchmark: str = "^NSEI",
     ) -> Tuple[Optional[float], Optional[float], Optional[int]]:
         """Fetch raw and alpha return for ticker over holding_days from trade_date.
 
@@ -288,10 +301,25 @@ class MarketMindsGraph:
     def propagate(self, company_name, trade_date):
         """Run the trading agents graph for a company on a specific date.
 
+        ``company_name`` is resolved to an exchange-qualified Indian symbol
+        first: the price source returns nothing for a bare NSE name, and the
+        indicator path degrades to blank values rather than an error, so an
+        unresolved ticker would yield a confident report built on no data.
+
         When ``checkpoint_enabled`` is set in config, the graph is recompiled
         with a per-ticker SqliteSaver so a crashed run can resume from the last
         successful node on a subsequent invocation with the same ticker+date.
         """
+        from marketminds.dataflows.india import describe_session, is_trading_day, resolve_ticker
+
+        resolved = resolve_ticker(company_name)
+        if resolved.symbol != company_name:
+            logger.info("Resolved ticker %s -> %s", company_name, resolved.symbol)
+        company_name = resolved.symbol
+
+        if self.config.get("require_trading_day", True) and not is_trading_day(trade_date):
+            raise ValueError(describe_session(trade_date))
+
         self.ticker = company_name
 
         # Resolve any pending memory-log entries for this ticker before the pipeline runs.
@@ -330,21 +358,25 @@ class MarketMindsGraph:
         init_agent_state = self.propagator.create_initial_state(
             company_name, trade_date, past_context=past_context
         )
-        args = self.propagator.get_graph_args()
+        args = self.propagator.get_graph_args(callbacks=self.callbacks or None)
 
         # Inject thread_id so same ticker+date resumes, different date starts fresh.
         if self.config.get("checkpoint_enabled"):
             tid = thread_id(company_name, str(trade_date))
             args.setdefault("config", {}).setdefault("configurable", {})["thread_id"] = tid
 
-        if self.debug:
+        if self.debug or self.on_chunk:
             trace = []
             for chunk in self.graph.stream(init_agent_state, **args):
-                if len(chunk["messages"]) == 0:
-                    pass
-                else:
+                if self.on_chunk:
+                    self.on_chunk(chunk)
+                if not chunk.get("messages"):
+                    if self.on_chunk:
+                        trace.append(chunk)
+                    continue
+                if self.debug:
                     chunk["messages"][-1].pretty_print()
-                    trace.append(chunk)
+                trace.append(chunk)
             # Streamed chunks are per-node deltas. Merge them so the returned
             # state matches what graph.invoke() yields in the non-debug path.
             final_state = {}

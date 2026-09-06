@@ -1,118 +1,250 @@
-import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import { listRuns } from '../services/api';
-import './Dashboard.css';
+import { useCallback, useEffect, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { getRunStats, listRuns } from '../lib/api';
+import {
+  compactNumber,
+  durationBetween,
+  formatDuration,
+  ratingTone,
+  relativeTime,
+  statusTone,
+} from '../lib/format';
+import { RankedBars, RatingDistribution, Sparkline, StatTile, TokenDonut } from '../components/charts';
+import {
+  Alert,
+  Badge,
+  Button,
+  Card,
+  CardHeader,
+  EmptyState,
+  Icon,
+  LoadingRows,
+  PageHeader,
+  StatusDot,
+} from '../components/ui';
 
 export default function Dashboard() {
+  const [stats, setStats] = useState(null);
   const [runs, setRuns] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const navigate = useNavigate();
+
+  // `loading` starts true, so the first fetch never has to set it — that keeps
+  // the mount effect free of synchronous state updates.
+  const fetchAll = useCallback(
+    () =>
+      Promise.all([getRunStats(), listRuns({ limit: 8 })])
+        .then(([s, r]) => {
+          setStats(s);
+          setRuns(r);
+          setError(null);
+        })
+        .catch((err) => setError(err.message))
+        .finally(() => setLoading(false)),
+    [],
+  );
 
   useEffect(() => {
-    listRuns({ limit: 20 })
-      .then(setRuns)
-      .catch(() => setRuns([]))
-      .finally(() => setLoading(false));
-  }, []);
+    fetchAll();
+  }, [fetchAll]);
 
-  const stats = {
-    total: runs.length,
-    completed: runs.filter(r => r.status === 'completed').length,
-    running: runs.filter(r => r.status === 'running').length,
-    failed: runs.filter(r => r.status === 'failed').length,
+  const load = () => {
+    setLoading(true);
+    fetchAll();
   };
 
+  // A run in flight will change on its own, so refresh while one is active.
+  const hasActive = runs.some((r) => r.status === 'running' || r.status === 'pending');
+  useEffect(() => {
+    if (!hasActive) return undefined;
+    const id = setInterval(fetchAll, 10000);
+    return () => clearInterval(id);
+  }, [hasActive, fetchAll]);
+
+  if (loading && !stats) {
+    return (
+      <div className="space-y-6">
+        <PageHeader title="Dashboard" description="Loading your research history…" />
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Card key={i}>
+              <LoadingRows rows={1} />
+            </Card>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  const totalTokens = (stats?.tokens_in || 0) + (stats?.tokens_out || 0);
+
   return (
-    <div className="dashboard">
-      <div className="page-header">
-        <div>
-          <h1>Dashboard</h1>
-          <p className="text-muted">Overview of your trading analysis runs</p>
-        </div>
-        <Link to="/runs/new" className="btn btn-primary">
-          + New Analysis
-        </Link>
+    <div className="space-y-6">
+      <PageHeader
+        title="Dashboard"
+        description="What the agent desk has produced so far."
+      >
+        <Button size="sm" icon="refresh" onClick={load} loading={loading}>
+          Refresh
+        </Button>
+        <Button as={Link} to="/runs/new" variant="primary" size="sm" icon="plus">
+          New analysis
+        </Button>
+      </PageHeader>
+
+      {error && (
+        <Alert title="Could not reach the API" action={<Button size="sm" onClick={load}>Retry</Button>}>
+          {error}. Check that the backend is running on port 8000.
+        </Alert>
+      )}
+
+      {/* Headline counters */}
+      <div className="stagger grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <StatTile
+          label="Total runs"
+          value={stats?.total ?? 0}
+          sublabel={`${stats?.completed ?? 0} completed`}
+          icon={<Icon name="layers" size={15} className="text-ink-muted" />}
+        />
+        <StatTile
+          label="In flight"
+          value={stats?.running ?? 0}
+          tone={stats?.running ? 'accent' : 'neutral'}
+          sublabel={stats?.pending ? `${stats.pending} queued or orphaned` : 'Nothing running'}
+          icon={<Icon name="activity" size={15} className="text-ink-muted" />}
+        />
+        <StatTile
+          label="Avg duration"
+          value={stats?.avg_duration_seconds ? formatDuration(stats.avg_duration_seconds) : '—'}
+          sublabel="Across completed runs"
+          icon={<Icon name="clock" size={15} className="text-ink-muted" />}
+        />
+        <StatTile
+          label="Tokens used"
+          value={compactNumber(totalTokens)}
+          tone={totalTokens ? 'neutral' : 'neutral'}
+          sublabel={`${compactNumber(stats?.llm_calls ?? 0)} LLM calls`}
+          icon={<Icon name="cpu" size={15} className="text-ink-muted" />}
+        />
       </div>
 
-      {/* Stats Cards */}
-      <div className="stats-grid stagger-children">
-        <div className="stat-card glass-card">
-          <div className="stat-card-icon cyan">📊</div>
-          <div>
-            <div className="stat-card-value">{stats.total}</div>
-            <div className="stat-card-label text-muted">Total Runs</div>
-          </div>
-        </div>
-        <div className="stat-card glass-card">
-          <div className="stat-card-icon green">✅</div>
-          <div>
-            <div className="stat-card-value">{stats.completed}</div>
-            <div className="stat-card-label text-muted">Completed</div>
-          </div>
-        </div>
-        <div className="stat-card glass-card">
-          <div className="stat-card-icon blue">⚡</div>
-          <div>
-            <div className="stat-card-value">{stats.running}</div>
-            <div className="stat-card-label text-muted">Running</div>
-          </div>
-        </div>
-        <div className="stat-card glass-card">
-          <div className="stat-card-icon red">❌</div>
-          <div>
-            <div className="stat-card-value">{stats.failed}</div>
-            <div className="stat-card-label text-muted">Failed</div>
-          </div>
-        </div>
-      </div>
-
-      {/* Recent Runs Table */}
-      <div className="recent-runs glass-card">
-        <div className="section-header">
-          <h2>Recent Runs</h2>
-          <Link to="/history" className="btn btn-ghost btn-sm">View All →</Link>
-        </div>
-        {loading ? (
-          <div className="empty-state">
-            <div className="spinner" />
-            <p className="text-muted">Loading runs...</p>
-          </div>
-        ) : runs.length === 0 ? (
-          <div className="empty-state">
-            <div className="empty-icon">🚀</div>
-            <h3>No runs yet</h3>
-            <p className="text-muted">Start your first analysis to see results here.</p>
-            <Link to="/runs/new" className="btn btn-primary mt-md">Start Analysis</Link>
-          </div>
-        ) : (
-          <table className="runs-table">
-            <thead>
-              <tr>
-                <th>Ticker</th>
-                <th>Date</th>
-                <th>Status</th>
-                <th>Decision</th>
-                <th>Created</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
+      <div className="grid gap-4 lg:grid-cols-3">
+        {/* Recent runs */}
+        <Card className="lg:col-span-2">
+          <CardHeader
+            title="Recent runs"
+            icon="history"
+            description="The eight most recent analyses"
+            action={
+              <Button as={Link} to="/history" variant="ghost" size="sm" iconRight="arrowRight">
+                All runs
+              </Button>
+            }
+          />
+          {runs.length === 0 ? (
+            <EmptyState
+              icon="spark"
+              title="No analyses yet"
+              description="Pick a ticker and a date, choose your analyst team, and the desk goes to work."
+              action={
+                <Button as={Link} to="/runs/new" variant="primary" size="sm" icon="plus">
+                  Run your first analysis
+                </Button>
+              }
+            />
+          ) : (
+            <ul className="divide-y divide-line">
               {runs.map((run) => (
-                <tr key={run.id}>
-                  <td><span className="ticker-badge">{run.ticker}</span></td>
-                  <td className="font-mono text-sm">{run.trade_date}</td>
-                  <td><span className={`badge badge-${run.status}`}>{run.status}</span></td>
-                  <td className="text-sm">{run.final_decision ? run.final_decision.substring(0, 40) + '...' : '—'}</td>
-                  <td className="text-sm text-muted">{new Date(run.created_at).toLocaleString()}</td>
-                  <td>
-                    <Link to={run.status === 'running' ? `/runs/${run.id}/live` : `/runs/${run.id}`} className="btn btn-ghost btn-sm">
-                      {run.status === 'running' ? 'Watch Live' : 'View'}
-                    </Link>
-                  </td>
-                </tr>
+                <li key={run.id}>
+                  <button
+                    onClick={() =>
+                      navigate(
+                        run.status === 'running' || run.status === 'pending'
+                          ? `/runs/${run.id}/live`
+                          : `/runs/${run.id}`,
+                      )
+                    }
+                    className="flex w-full items-center gap-3 px-5 py-3 text-left transition-colors hover:bg-surface-2"
+                  >
+                    <StatusDot
+                      tone={statusTone(run.status)}
+                      pulse={run.status === 'running'}
+                    />
+                    <span className="w-24 shrink-0 truncate font-mono text-[13px] font-semibold text-ink">
+                      {run.ticker}
+                    </span>
+                    <span className="hidden w-24 shrink-0 text-[12.5px] text-ink-muted sm:block">
+                      {run.trade_date}
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      {run.final_decision ? (
+                        <Badge tone={ratingTone(run.final_decision)}>{run.final_decision}</Badge>
+                      ) : (
+                        <Badge tone={statusTone(run.status)}>{run.status}</Badge>
+                      )}
+                    </span>
+                    <span className="hidden shrink-0 text-[12px] text-ink-muted md:block">
+                      {formatDuration(durationBetween(run.created_at, run.completed_at))}
+                    </span>
+                    <span className="w-24 shrink-0 text-right text-[12px] text-ink-muted">
+                      {relativeTime(run.created_at)}
+                    </span>
+                    <Icon name="chevronRight" size={14} className="shrink-0 text-ink-muted" />
+                  </button>
+                </li>
               ))}
-            </tbody>
-          </table>
-        )}
+            </ul>
+          )}
+        </Card>
+
+        {/* Rating mix */}
+        <Card>
+          <CardHeader
+            title="Rating mix"
+            icon="target"
+            description="Across every completed run"
+          />
+          <div className="px-5 py-4">
+            <RatingDistribution counts={stats?.rating_counts} />
+          </div>
+        </Card>
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-3">
+        <Card>
+          <CardHeader title="Activity" icon="activity" description="Runs started per day" />
+          <div className="px-5 py-4">
+            <Sparkline data={stats?.runs_per_day || []} height={64} />
+          </div>
+        </Card>
+
+        <Card>
+          <CardHeader
+            title="Most analysed"
+            icon="chart"
+            description="Tickers by run count"
+          />
+          <div className="px-3 py-3">
+            <RankedBars
+              items={stats?.top_tickers || []}
+              onSelect={(ticker) => navigate(`/history?ticker=${encodeURIComponent(ticker)}`)}
+            />
+          </div>
+        </Card>
+
+        <Card>
+          <CardHeader title="Token usage" icon="cpu" description="Input vs output, all runs" />
+          <div className="px-5 py-4">
+            {totalTokens ? (
+              <TokenDonut tokensIn={stats.tokens_in} tokensOut={stats.tokens_out} />
+            ) : (
+              <p className="py-6 text-center text-[13px] text-ink-muted">
+                Token counts are recorded from your next run onward.
+              </p>
+            )}
+          </div>
+        </Card>
       </div>
     </div>
   );

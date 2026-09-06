@@ -23,11 +23,23 @@ class Run(Base):
     id = Column(String(32), primary_key=True, default=_new_id)
     ticker = Column(String(32), nullable=False, index=True)
     trade_date = Column(String(10), nullable=False)
-    status = Column(String(20), nullable=False, default="pending")  # pending, running, completed, failed
+    status = Column(String(20), nullable=False, default="pending")  # pending, running, completed, failed, cancelled
     config_snapshot = Column(JSON, nullable=True)
     final_decision = Column(Text, nullable=True)
     result_json = Column(JSON, nullable=True)
     error_message = Column(Text, nullable=True)
+
+    # Live pipeline snapshot: {agent_name: pending|running|completed}. Persisted
+    # so reopening a run mid-flight restores the pipeline view instead of
+    # showing every agent as pending until the next event arrives.
+    agent_status = Column(JSON, nullable=True)
+
+    # Usage counters accumulated by the LangChain stats callback.
+    llm_calls = Column(Integer, nullable=False, default=0, server_default="0")
+    tool_calls = Column(Integer, nullable=False, default=0, server_default="0")
+    tokens_in = Column(Integer, nullable=False, default=0, server_default="0")
+    tokens_out = Column(Integer, nullable=False, default=0, server_default="0")
+
     created_at = Column(DateTime, default=_utcnow)
     started_at = Column(DateTime, nullable=True)
     completed_at = Column(DateTime, nullable=True)

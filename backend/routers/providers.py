@@ -44,11 +44,14 @@ def list_providers():
 
     providers = []
     for name, env_var in PROVIDER_API_KEY_ENV.items():
+        # Providers that need no key (local runtimes) count as always ready.
+        has_key = True if env_var is None else bool(os.getenv(env_var, "").strip())
         providers.append(ProviderListItem(
             name=name,
             display_name=_DISPLAY_NAMES.get(name, name),
             requires_key=env_var is not None,
             env_var=env_var,
+            has_key=has_key,
         ))
     return providers
 

@@ -1,14 +1,26 @@
 <!doctype html>
-<html lang="en" data-theme="dark">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="MarketMinds — Multi-Agent AI Trading Framework. 12 specialized LLM agents collaborate to deliver actionable Buy/Hold/Sell decisions." />
-    <meta name="theme-color" content="#0B1020" />
-    <title>MarketMinds — AI Trading Dashboard</title>
+    <meta name="description" content="MarketMinds — a multi-agent research desk. Analysts, researchers, a trader and a risk committee debate their way to a position rating on any ticker." />
+    <meta name="theme-color" content="#FAFAF9" />
+    <title>MarketMinds — Multi-Agent Research Desk</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+    <script>
+      // Applied before first paint so the correct theme is never flashed away.
+      (function () {
+        try {
+          var stored = localStorage.getItem('mm-theme');
+          if (stored === 'dark' || stored === 'light') {
+            document.documentElement.setAttribute('data-theme', stored);
+          }
+        } catch (e) { /* private mode — fall through to the light default */ }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

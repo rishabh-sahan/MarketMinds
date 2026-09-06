@@ -17,6 +17,7 @@ _ENV_OVERRIDES = {
     "MARKETMINDS_MAX_RISK_ROUNDS":      "max_risk_discuss_rounds",
     "MARKETMINDS_CHECKPOINT_ENABLED":   "checkpoint_enabled",
     "MARKETMINDS_BENCHMARK_TICKER":     "benchmark_ticker",
+    "MARKETMINDS_REQUIRE_TRADING_DAY":  "require_trading_day",
 }
 
 
@@ -80,15 +81,16 @@ DEFAULT_CONFIG = _apply_env_overrides({
     "news_article_limit": 20,             # max articles per ticker (ticker-news)
     "global_news_article_limit": 10,      # max articles for global/macro news
     "global_news_lookback_days": 7,       # macro news lookback window
-    # Search queries used by get_global_news for macro headlines. Extend or
-    # replace to broaden geographic / sector coverage.
-    "global_news_queries": [
-        "Federal Reserve interest rates inflation",
-        "S&P 500 earnings GDP economic outlook",
-        "geopolitical risk trade war sanctions",
-        "ECB Bank of England BOJ central bank policy",
-        "oil commodities supply chain energy",
-    ],
+    # Macro themes fetched by get_global_news. These drive Indian equities
+    # specifically; the full topic set lives in
+    # marketminds/dataflows/india_news.MACRO_TOPICS and this list selects
+    # which of those to run. Empty means "all topics".
+    "macro_news_topics": [],
+    # Sector coverage pulled alongside the macro block. Empty means "all
+    # sectors" (see india_news.SECTOR_TOPICS).
+    "sector_news_topics": [],
+    # Include the live index / currency / commodity snapshot in the news brief.
+    "include_market_context": True,
     # Data vendor configuration
     # Category-level configuration (default for all tools in category)
     "data_vendors": {
@@ -101,21 +103,22 @@ DEFAULT_CONFIG = _apply_env_overrides({
     "tool_vendors": {
         # Example: "get_stock_data": "alpha_vantage",  # Override category default
     },
-    # Benchmark for alpha calculation in the reflection layer.
-    # ``benchmark_ticker`` (when set) overrides the suffix map for all
-    # tickers; leave it None to use ``benchmark_map`` for auto-detection
-    # based on the ticker's exchange suffix. SPY remains the US default
-    # so the reflection label keeps reading "Alpha vs SPY" for US tickers
-    # while non-US tickers get their regional index automatically.
+    # Benchmark for alpha calculation in the reflection layer. MarketMinds
+    # covers Indian listings only: NSE names are measured against the Nifty 50
+    # and BSE names against the Sensex. Set ``benchmark_ticker`` to force one
+    # benchmark for every run (e.g. "^NSEBANK" for a bank-only portfolio);
+    # leave it None to pick from the exchange suffix.
     "benchmark_ticker": None,
     "benchmark_map": {
-        ".NS":  "^NSEI",    # NSE India (Nifty 50)
-        ".BO":  "^BSESN",   # BSE India (Sensex)
-        ".T":   "^N225",    # Tokyo (Nikkei 225)
-        ".HK":  "^HSI",     # Hong Kong (Hang Seng)
-        ".L":   "^FTSE",    # London (FTSE 100)
-        ".TO":  "^GSPTSE",  # Toronto (TSX Composite)
-        ".AX":  "^AXJO",    # Australia (ASX 200)
-        "":     "SPY",      # default for US-listed tickers (no suffix)
+        ".NS": "^NSEI",    # NSE India (Nifty 50)
+        ".BO": "^BSESN",   # BSE India (Sensex)
+        "":    "^NSEI",    # bare names resolve to NSE, so Nifty 50
     },
+    # Analysis dates are interpreted in IST — the market's own day — rather
+    # than the host timezone, and validated against the NSE trading calendar.
+    "market_timezone": "Asia/Kolkata",
+    "currency": "INR",
+    # Reject an analysis date on which the exchange was closed. Turn off to
+    # allow backtesting against a non-trading date.
+    "require_trading_day": True,
 })

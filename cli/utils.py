@@ -12,7 +12,7 @@ from marketminds.llm_clients.model_catalog import get_model_options
 
 console = Console()
 
-TICKER_INPUT_EXAMPLES = "Examples: SPY, CNC.TO, 7203.T, 0700.HK"
+TICKER_INPUT_EXAMPLES = "Examples: RELIANCE, TCS, INFY, HDFCBANK.NS"
 
 ANALYST_ORDER = [
     ("Market Analyst", AnalystType.MARKET),

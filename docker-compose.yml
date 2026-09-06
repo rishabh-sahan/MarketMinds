@@ -1,0 +1,29 @@
+# One service: the API and the web UI in a single container.
+#
+#   docker compose up --build      →  http://localhost:8000
+#
+# API keys are read from a .env file next to this one (copy .env.example).
+# Nothing is baked into the image.
+
+services:
+  marketminds:
+    build: .
+    image: marketminds:latest
+    container_name: marketminds
+    ports:
+      - "${MARKETMINDS_PORT:-8000}:8000"
+    # Provider keys and any MARKETMINDS_* overrides. Compose treats a missing
+    # file as an error, so create an empty .env if you set keys another way.
+    env_file:
+      - .env
+    volumes:
+      # Run history, the decision log the agents learn from, cached market
+      # data and checkpoints. Remove this volume and the system forgets.
+      - marketminds-data:/data
+    restart: unless-stopped
+    # An analysis can run for several minutes; give it room to finish on stop
+    # rather than being killed after the default 10 seconds.
+    stop_grace_period: 60s
+
+volumes:
+  marketminds-data:

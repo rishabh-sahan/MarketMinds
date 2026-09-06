@@ -501,8 +501,8 @@ def get_user_selections():
     console.print(
         create_question_box(
             "Step 1: Ticker Symbol",
-            "Enter the exact ticker symbol to analyze, including exchange suffix when needed (examples: SPY, CNC.TO, 7203.T, 0700.HK)",
-            "SPY",
+            "Enter the NSE or BSE ticker to analyze. A bare name resolves to NSE (examples: RELIANCE, TCS, INFY, HDFCBANK.NS)",
+            "RELIANCE",
         )
     )
     selected_ticker = get_ticker()
@@ -643,14 +643,14 @@ def get_ticker():
                 and len(value.strip()) <= 32
             )
         )
-        or "Please enter a valid ticker symbol, e.g. AAPL, 000404.SZ, 0700.HK.",
+        or "Please enter a valid Indian ticker, e.g. RELIANCE, TCS, HDFCBANK.NS.",
     ).ask()
 
     if ticker is None:
         console.print("\n[red]No ticker symbol provided. Exiting...[/red]")
         raise typer.Exit(1)
 
-    return (ticker.strip() or "SPY").upper()
+    return (ticker.strip() or "RELIANCE").upper()
 
 
 def get_analysis_date():

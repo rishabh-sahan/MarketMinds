@@ -16,7 +16,8 @@ from marketminds.agents.utils.fundamental_data_tools import (
 from marketminds.agents.utils.news_data_tools import (
     get_news,
     get_insider_transactions,
-    get_global_news
+    get_global_news,
+    get_market_context,
 )
 
 
@@ -30,6 +31,7 @@ __all__ = [
     "get_news",
     "get_insider_transactions",
     "get_global_news",
+    "get_market_context",
     "get_language_instruction",
     "build_instrument_context",
     "create_msg_delete",
@@ -53,11 +55,18 @@ def get_language_instruction() -> str:
 
 
 def build_instrument_context(ticker: str) -> str:
-    """Describe the exact instrument so agents preserve exchange-qualified tickers."""
+    """Describe the exact instrument so agents preserve the exchange suffix."""
+    from marketminds.dataflows.india import CURRENCY_SYMBOL, split_suffix
+
+    _, suffix = split_suffix(ticker)
+    exchange = "BSE" if suffix == ".BO" else "NSE"
+    index = "Sensex" if suffix == ".BO" else "Nifty 50"
     return (
-        f"The instrument to analyze is `{ticker}`. "
-        "Use this exact ticker in every tool call, report, and recommendation, "
-        "preserving any exchange suffix (e.g. `.TO`, `.L`, `.HK`, `.T`)."
+        f"The instrument to analyze is `{ticker}`, listed on the {exchange} in India. "
+        f"Use this exact ticker in every tool call, report, and recommendation, "
+        f"preserving the exchange suffix. All prices, targets and stop-losses are in "
+        f"Indian rupees ({CURRENCY_SYMBOL}); never quote them in dollars. "
+        f"Judge relative performance against the {index}."
     )
 
 def create_msg_delete():

@@ -82,6 +82,44 @@ class WSManager:
             "timestamp": datetime.now(timezone.utc).isoformat(),
         })
 
+    async def emit_report_update(self, run_id: str, agent_name: str, report_key: str, report_content: str):
+        """Push a report section as soon as the agent that owns it produces text."""
+        await self.broadcast(run_id, {
+            "type": "report_update",
+            "agent": agent_name,
+            "report_key": report_key,
+            "report_content": report_content,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+        })
+
+    async def emit_agent_snapshot(self, run_id: str, statuses: dict):
+        """Push the whole pipeline state, so a late subscriber catches up at once."""
+        await self.broadcast(run_id, {
+            "type": "agent_snapshot",
+            "statuses": statuses,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+        })
+
+    async def emit_stats(self, run_id: str, stats: dict):
+        await self.broadcast(run_id, {
+            "type": "stats",
+            "stats": stats,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+        })
+
+    async def emit_status(self, run_id: str, status: str):
+        await self.broadcast(run_id, {
+            "type": "run_status",
+            "status": status,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+        })
+
+    async def emit_run_cancelled(self, run_id: str):
+        await self.broadcast(run_id, {
+            "type": "run_cancelled",
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+        })
+
     async def emit_run_complete(self, run_id: str, decision: str):
         await self.broadcast(run_id, {
             "type": "run_complete",

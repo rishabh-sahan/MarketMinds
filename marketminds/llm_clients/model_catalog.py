@@ -101,18 +101,31 @@ MODEL_OPTIONS: ProviderModeOptions = {
             ("Claude Sonnet 4.6 - Best speed and intelligence balance", "claude-sonnet-4-6"),
         ],
     },
+    # Verified against the live generateContent listing. The Gemini 2.5 line
+    # (2.5-flash, 2.5-flash-lite, 2.5-pro) is deliberately absent: those are
+    # still listed by the API but answer 404 "no longer available to new
+    # users", so offering them only produces a failed run.
+    #
+    # Pro is flagged paid-tier because the free tier allocates it a quota of
+    # literally zero and rejects with 429 "limit: 0" — a message that reads
+    # like a temporary rate limit and invites pointless retries.
     "google": {
         "quick": [
-            ("Gemini 3 Flash - Next-gen fast (preview)", "gemini-3-flash-preview"),
-            ("Gemini 2.5 Flash - Balanced, stable", "gemini-2.5-flash"),
-            ("Gemini 3.1 Flash Lite - Most cost-efficient (GA)", "gemini-3.1-flash-lite"),
-            ("Gemini 2.5 Flash Lite - Fast, low-cost", "gemini-2.5-flash-lite"),
+            ("Gemini 3.8 Flash - Newest fast model, 1M ctx", "gemini-3.8-flash"),
+            ("Gemini 3.7 Flash - Fast, 1M ctx", "gemini-3.7-flash"),
+            ("Gemini 3.6 Flash - Fast, 1M ctx", "gemini-3.6-flash"),
+            ("Gemini 3.5 Flash Lite - Cost-efficient, 1M ctx", "gemini-3.5-flash-lite"),
+            ("Gemini 3.1 Flash Lite - Most cost-efficient (GA), 1M ctx", "gemini-3.1-flash-lite"),
+            ("Gemini 3 Flash - Previous-gen fast (preview), 1M ctx", "gemini-3-flash-preview"),
+            ("Custom model ID", "custom"),
         ],
         "deep": [
-            ("Gemini 3.1 Pro - Reasoning-first, complex workflows (preview)", "gemini-3.1-pro-preview"),
-            ("Gemini 3 Flash - Next-gen fast (preview)", "gemini-3-flash-preview"),
-            ("Gemini 2.5 Pro - Stable pro model", "gemini-2.5-pro"),
-            ("Gemini 2.5 Flash - Balanced, stable", "gemini-2.5-flash"),
+            ("Gemini 3.8 Flash - Newest flash, strong general reasoning, 1M ctx", "gemini-3.8-flash"),
+            ("Gemini 3.5 Flash - Balanced, 1M ctx", "gemini-3.5-flash"),
+            ("Gemini 3.1 Pro - Reasoning-first (preview) - PAID TIER ONLY", "gemini-3.1-pro-preview"),
+            ("Gemini 3 Flash - Previous-gen (preview), 1M ctx", "gemini-3-flash-preview"),
+            ("Gemini 3.1 Flash Lite - Cheapest deep option, 1M ctx", "gemini-3.1-flash-lite"),
+            ("Custom model ID", "custom"),
         ],
     },
     "xai": {
@@ -178,15 +191,21 @@ MODEL_OPTIONS: ProviderModeOptions = {
     # Sarvam AI (India). The /v1 endpoint serves the native sarvam-105b
     # family; Sarvam's open-weight models (glm5.2, gemma4, deepseekv4-flash)
     # live on a separate /v2 path and would need their own provider entry.
+    # The conversations variant is listed at 32K, not the 128K this catalog
+    # previously claimed: the API rejects anything larger with "exceeds the
+    # model context window of 32000 tokens". Measured by overflow probe, the
+    # flagship accepts well past that. A full MarketMinds run accumulates tool
+    # output across the agent loop and routinely exceeds 32K, so the
+    # conversations variant is listed last with its real ceiling stated.
     "sarvam": {
         "quick": [
-            ("Sarvam 105B Conversations - Tuned for real-time dialogue, 128K ctx", "sarvam-105b-conversations"),
             ("Sarvam 105B - Flagship, 128K ctx", "sarvam-105b"),
+            ("Sarvam 105B Conversations - Dialogue-tuned, 32K ctx (too small for long runs)", "sarvam-105b-conversations"),
             ("Custom model ID", "custom"),
         ],
         "deep": [
             ("Sarvam 105B - Flagship, complex reasoning and agentic tasks, 128K ctx", "sarvam-105b"),
-            ("Sarvam 105B Conversations - Dialogue-tuned variant, 128K ctx", "sarvam-105b-conversations"),
+            ("Sarvam 105B Conversations - Dialogue-tuned, 32K ctx (too small for long runs)", "sarvam-105b-conversations"),
             ("Custom model ID", "custom"),
         ],
     },
