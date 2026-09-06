@@ -210,7 +210,7 @@ export default function LiveRun() {
 
       {/* ------------------------------------------------------------ panes */}
       <div className="grid gap-4 xl:grid-cols-[300px_minmax(0,1fr)]">
-        <Card className="h-[520px] overflow-hidden xl:h-[640px]">
+        <Card className="h-[560px] overflow-hidden xl:h-[720px]">
           <AgentPipeline
             statuses={stream.agentStatus}
             selectedAnalysts={selectedAnalysts}
@@ -220,7 +220,7 @@ export default function LiveRun() {
         </Card>
 
         <div className="flex flex-col gap-4">
-          <Card className="h-[360px] overflow-hidden xl:h-[400px]">
+          <Card className="h-[400px] overflow-hidden xl:h-[470px]">
             <ReportView
               title={focusEntry?.agent}
               agent={focusAgent}
@@ -241,7 +241,7 @@ export default function LiveRun() {
             />
           </Card>
 
-          <Card className={cx('overflow-hidden', 'h-[220px] xl:h-[224px]')}>
+          <Card className={cx('overflow-hidden', 'h-[240px] xl:h-[234px]')}>
             <EventLog events={stream.log} connected={stream.connected} live={isActive} />
           </Card>
         </div>

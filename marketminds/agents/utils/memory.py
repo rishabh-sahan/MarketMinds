@@ -1,10 +1,13 @@
 """Append-only markdown decision log for MarketMinds."""
 
+import logging
 from typing import List, Optional
 from pathlib import Path
 import re
 
 from marketminds.agents.utils.rating import parse_rating
+
+logger = logging.getLogger(__name__)
 
 
 class TradingMemoryLog:
@@ -36,6 +39,19 @@ class TradingMemoryLog:
     ) -> None:
         """Append pending entry at end of propagate(). No LLM call."""
         if not self._log_path:
+            return
+
+        # Never log a decision that has no text behind it. `parse_rating`
+        # falls back to "Hold" for unparseable input, so an empty Portfolio
+        # Manager output would otherwise be filed as a real Hold — and then
+        # injected into a later run's prompt as prior experience. A gap in
+        # the record is recoverable; a fabricated past call is not.
+        if not str(final_trade_decision or "").strip():
+            logger.warning(
+                "Refusing to log an empty decision for %s on %s — the Portfolio "
+                "Manager produced no output, so there is no rating to record.",
+                ticker, trade_date,
+            )
             return
         # Idempotency guard: fast raw-text scan instead of full parse
         if self._log_path.exists():

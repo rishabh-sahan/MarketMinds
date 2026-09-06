@@ -39,7 +39,7 @@ export default function ReportView({
   const pending = !content;
 
   return (
-    <article className={cx('flex min-h-0 flex-col', className)}>
+    <article className={cx('flex h-full min-h-0 flex-col', className)}>
       <header className="flex shrink-0 items-start justify-between gap-3 border-b border-line px-5 py-3.5">
         <div className="flex min-w-0 items-center gap-2.5">
           {entry && (

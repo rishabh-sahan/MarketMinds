@@ -42,6 +42,14 @@ from .reflection import Reflector
 from .signal_processing import SignalProcessor
 
 
+class IncompleteAnalysisError(RuntimeError):
+    """Raised when the pipeline finishes without producing its decision.
+
+    Distinct from a provider error: every call succeeded, but the agents
+    returned nothing usable, so there is no rating to report.
+    """
+
+
 class MarketMindsGraph:
     """Main class that orchestrates the trading agents framework."""
 
@@ -385,6 +393,13 @@ class MarketMindsGraph:
         else:
             final_state = self.graph.invoke(init_agent_state, **args)
 
+        # Refuse to present an incomplete run as a finished one. An agent that
+        # returns empty text still advances the graph, so without this check a
+        # run where most agents produced nothing is recorded as "completed" —
+        # and an empty Portfolio Manager decision parses to the default "Hold",
+        # presenting a rating that nothing actually decided.
+        self._assert_analysis_complete(final_state)
+
         # Store current state for reflection.
         self.curr_state = final_state
 
@@ -405,6 +420,81 @@ class MarketMindsGraph:
             )
 
         return final_state, self.process_signal(final_state["final_trade_decision"])
+
+    # Sections the pipeline must produce for a run to mean anything, mapped to
+    # the agent responsible. Analyst reports are checked separately, since
+    # which ones are expected depends on the team selected for the run.
+    _REQUIRED_SECTIONS = {
+        "investment_plan": "Research Manager",
+        "trader_investment_plan": "Trader",
+        "final_trade_decision": "Portfolio Manager",
+    }
+
+    _ANALYST_SECTIONS = {
+        "market": ("market_report", "Market Analyst"),
+        "social": ("sentiment_report", "Sentiment Analyst"),
+        "news": ("news_report", "News Analyst"),
+        "fundamentals": ("fundamentals_report", "Fundamentals Analyst"),
+    }
+
+    def _assert_analysis_complete(self, final_state: Dict[str, Any]) -> None:
+        """Raise when agents finished without producing their output.
+
+        Some models — particularly ones that handle bound tools poorly — keep
+        requesting tools and never write their report, or return an empty
+        completion. The graph advances regardless, because an empty string is
+        a valid state value. The result is a run that looks successful while
+        being mostly blank, topped by a "Hold" that came from the rating
+        parser's default rather than from any analysis.
+        """
+        def blank(key: str) -> bool:
+            return not str(final_state.get(key) or "").strip()
+
+        empty = [
+            f"{agent} ({key})"
+            for key, agent in self._REQUIRED_SECTIONS.items()
+            if blank(key)
+        ]
+
+        for key, agent in self._ANALYST_SECTIONS.values():
+            if key in final_state and blank(key):
+                empty.append(f"{agent} ({key})")
+
+        # The debate histories carry the researchers' and risk committee's
+        # arguments; a name label with nothing after it is effectively empty.
+        for state_key, fields in (
+            ("investment_debate_state", ("bull_history", "bear_history")),
+            (
+                "risk_debate_state",
+                ("aggressive_history", "conservative_history", "neutral_history"),
+            ),
+        ):
+            debate = final_state.get(state_key) or {}
+            for field in fields:
+                text = str(debate.get(field) or "")
+                # Strip the "Aggressive Analyst: " style prefix before judging.
+                body = text.split(":", 1)[-1] if ":" in text else text
+                if not body.strip():
+                    empty.append(f"{field}")
+
+        if not empty:
+            return
+
+        decision_missing = blank("final_trade_decision")
+        detail = ", ".join(empty)
+
+        if decision_missing:
+            raise IncompleteAnalysisError(
+                "The analysis did not complete: the Portfolio Manager produced no "
+                "decision, so there is no rating. Empty sections: "
+                f"{detail}. This usually means the model returned empty responses "
+                "or kept calling tools without writing its report — try a model "
+                "that handles tool loops reliably, or reduce the prompt size."
+            )
+
+        logger.warning(
+            "Run finished with empty sections (rating still produced): %s", detail
+        )
 
     def _log_state(self, trade_date, final_state):
         """Log the final state to a JSON file."""

@@ -82,7 +82,7 @@ export default function EventLog({ events = [], connected, live = true, classNam
   };
 
   return (
-    <div className={cx('flex min-h-0 flex-col', className)}>
+    <div className={cx('flex h-full min-h-0 flex-col', className)}>
       <div className="flex shrink-0 items-center justify-between gap-3 border-b border-line px-5 py-3.5">
         <h2 className="flex items-center gap-2 text-[14px] font-semibold tracking-tight text-ink">
           <Icon name="activity" size={15} className="text-ink-muted" />
