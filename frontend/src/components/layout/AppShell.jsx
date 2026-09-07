@@ -3,6 +3,7 @@ import { Link, NavLink, useLocation } from 'react-router-dom';
 import { classNames as cx } from '../../lib/format';
 import { useTheme } from '../../lib/theme-context';
 import { Button, Icon } from '../ui';
+import AuthMenu from './AuthMenu';
 
 const NAV = [
   { to: '/dashboard', label: 'Dashboard', icon: 'dashboard' },
@@ -140,6 +141,7 @@ export default function AppShell({ children }) {
 
           <div className="flex shrink-0 items-center gap-2">
             <ThemeToggle />
+            <AuthMenu />
             <Button
               as={Link}
               to="/runs/new"

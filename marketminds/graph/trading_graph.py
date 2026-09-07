@@ -60,6 +60,7 @@ class MarketMindsGraph:
         config: Dict[str, Any] = None,
         callbacks: Optional[List] = None,
         on_chunk: Optional[Callable[[Dict[str, Any]], None]] = None,
+        memory_log=None,
     ):
         """Initialize the trading agents graph and components.
 
@@ -67,6 +68,11 @@ class MarketMindsGraph:
             selected_analysts: List of analyst types to include
             debug: Whether to run in debug mode
             config: Configuration dictionary. If None, uses default config
+            memory_log: Decision-log store. Defaults to the markdown log built
+                from ``config``; the web backend passes a database-backed one.
+                A parameter rather than a config key on purpose — ``config`` is
+                deep-copied by ``set_config``, and a live object with a database
+                session in it cannot be copied.
             callbacks: Optional list of callback handlers (e.g., for tracking LLM/tool stats)
             on_chunk: Optional callable invoked with each per-node state delta as
                 the graph streams. Lets an embedding application (the web backend)
@@ -93,6 +99,12 @@ class MarketMindsGraph:
         if self.callbacks:
             llm_kwargs["callbacks"] = self.callbacks
 
+        # A caller-supplied credential overrides the environment, so a hosted
+        # instance can run on the visitor's own key. It lives only in this
+        # config dict for the duration of the run.
+        if self.config.get("api_key"):
+            llm_kwargs["api_key"] = self.config["api_key"]
+
         deep_client = create_llm_client(
             provider=self.config["llm_provider"],
             model=self.config["deep_think_llm"],
@@ -109,7 +121,10 @@ class MarketMindsGraph:
         self.deep_thinking_llm = deep_client.get_llm()
         self.quick_thinking_llm = quick_client.get_llm()
         
-        self.memory_log = TradingMemoryLog(self.config)
+        # The decision log is injectable so a deployed instance can keep it in
+        # the database instead of a file — same interface, different store.
+        # The CLI and local runs get the markdown log by default.
+        self.memory_log = memory_log or TradingMemoryLog(self.config)
 
         # Create tool nodes
         self.tool_nodes = self._create_tool_nodes()
@@ -528,8 +543,14 @@ class MarketMindsGraph:
             "final_trade_decision": final_state["final_trade_decision"],
         }
 
-        # Save to file. Reject ticker values that would escape the
-        # results directory when joined as a path component.
+        # Save to file. The web app turns this off: it already persists the
+        # same state as `runs.result_json`, so writing it again would only
+        # scatter copies across a disk that does not survive a restart.
+        if not self.config.get("save_state_logs", True):
+            return
+
+        # Reject ticker values that would escape the results directory when
+        # joined as a path component.
         safe_ticker = safe_ticker_component(self.ticker)
         directory = Path(self.config["results_dir"]) / safe_ticker / "MarketMindsStrategy_logs"
         directory.mkdir(parents=True, exist_ok=True)

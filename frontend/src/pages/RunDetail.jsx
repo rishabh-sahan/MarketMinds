@@ -83,8 +83,8 @@ export default function RunDetail() {
 
   const handleExport = async () => {
     try {
-      await downloadRunReport(runId, `marketminds-${run.ticker}-${run.trade_date}.md`);
-      toast.push('Report downloaded');
+      await downloadRunReport(runId, `marketminds-${run.ticker}-${run.trade_date}.pdf`);
+      toast.push('PDF downloaded');
     } catch (err) {
       toast.push(err.message, 'danger');
     }
@@ -147,7 +147,7 @@ export default function RunDetail() {
           )}
           {run.result_json && (
             <Button size="sm" icon="download" onClick={handleExport}>
-              Export
+              Export PDF
             </Button>
           )}
           <Button

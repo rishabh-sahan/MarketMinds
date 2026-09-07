@@ -204,14 +204,19 @@ class OpenAIClient(BaseLLMClient):
             llm_kwargs["base_url"] = self.base_url or _resolve_provider_base_url(self.provider)
             api_key_env = get_api_key_env(self.provider)
             if api_key_env:
-                api_key = os.environ.get(api_key_env)
+                # A caller-supplied key wins over the environment. This is what
+                # lets a deployed instance hold no credentials at all and run
+                # entirely on keys the visitor brings, so the absence of an env
+                # var is only fatal when no key was passed either.
+                api_key = self.kwargs.get("api_key") or os.environ.get(api_key_env)
                 if api_key:
                     llm_kwargs["api_key"] = api_key
                 else:
                     raise ValueError(
                         f"API key for provider '{self.provider}' is not set. "
-                        f"Please set the {api_key_env} environment variable "
-                        f"(e.g. add {api_key_env}=your_key to your .env file)."
+                        f"Supply one with the request, or set the {api_key_env} "
+                        f"environment variable (e.g. add {api_key_env}=your_key "
+                        f"to your .env file)."
                     )
             else:
                 llm_kwargs["api_key"] = "ollama"

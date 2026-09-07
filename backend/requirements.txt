@@ -2,3 +2,10 @@ fastapi>=0.115.0
 uvicorn[standard]>=0.34.0
 sqlalchemy>=2.0.0
 python-dotenv>=1.0.0
+# PostgreSQL driver. Optional for SQLite, required when DATABASE_URL
+# points at Postgres — installed always so one image serves both.
+psycopg[binary]>=3.2
+# Verifies Supabase session tokens. The [crypto] extra pulls in `cryptography`,
+# which is required for the ES256 signatures Supabase issues — without it the
+# JWKS key cannot be used and every sign-in fails at verification.
+PyJWT[crypto]>=2.10

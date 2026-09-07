@@ -28,6 +28,8 @@ npm-debug.log*
 .env
 .env.*
 !.env.example
+# Pre-migration database snapshots — full run history, never in an image.
+.backup-*/
 *.db
 *.sqlite
 *.sqlite3

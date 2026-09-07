@@ -1,8 +1,10 @@
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { useEffect } from 'react';
 import { ThemeProvider } from './hooks/useTheme';
+import { AuthProvider } from './hooks/useAuth';
 import AppShell from './components/layout/AppShell';
 import Landing from './pages/Landing';
+import Guide from './pages/Guide';
 import Dashboard from './pages/Dashboard';
 import NewRun from './pages/NewRun';
 import LiveRun from './pages/LiveRun';
@@ -30,20 +32,23 @@ function Shell({ children }) {
 export default function App() {
   return (
     <ThemeProvider>
-      <BrowserRouter>
-        <ScrollToTop />
-        <Routes>
-          <Route path="/" element={<Landing />} />
-          <Route path="/dashboard" element={<Shell><Dashboard /></Shell>} />
-          <Route path="/runs/new" element={<Shell><NewRun /></Shell>} />
-          <Route path="/runs/:runId/live" element={<Shell><LiveRun /></Shell>} />
-          <Route path="/runs/:runId" element={<Shell><RunDetail /></Shell>} />
-          <Route path="/history" element={<Shell><History /></Shell>} />
-          <Route path="/memory" element={<Shell><Memory /></Shell>} />
-          <Route path="/config" element={<Shell><Config /></Shell>} />
-          <Route path="*" element={<Navigate to="/dashboard" replace />} />
-        </Routes>
-      </BrowserRouter>
+      <AuthProvider>
+        <BrowserRouter>
+          <ScrollToTop />
+          <Routes>
+            <Route path="/" element={<Landing />} />
+            <Route path="/guide" element={<Guide />} />
+            <Route path="/dashboard" element={<Shell><Dashboard /></Shell>} />
+            <Route path="/runs/new" element={<Shell><NewRun /></Shell>} />
+            <Route path="/runs/:runId/live" element={<Shell><LiveRun /></Shell>} />
+            <Route path="/runs/:runId" element={<Shell><RunDetail /></Shell>} />
+            <Route path="/history" element={<Shell><History /></Shell>} />
+            <Route path="/memory" element={<Shell><Memory /></Shell>} />
+            <Route path="/config" element={<Shell><Config /></Shell>} />
+            <Route path="*" element={<Navigate to="/dashboard" replace />} />
+          </Routes>
+        </BrowserRouter>
+      </AuthProvider>
     </ThemeProvider>
   );
 }

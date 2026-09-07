@@ -118,6 +118,12 @@ def _build_config(run_create_data: dict) -> dict:
         if run_create_data.get(key) is not None:
             config[key] = run_create_data[key]
 
+    # Transient credential, kept out of every persisted structure. The graph
+    # reads it when constructing its clients and nothing else touches it.
+    api_key = run_create_data.get("api_key")
+    if api_key:
+        config["api_key"] = api_key
+
     effort = run_create_data.get("reasoning_effort")
     if effort:
         effort_key = _EFFORT_KEY_BY_PROVIDER.get(str(config.get("llm_provider", "")).lower())
@@ -209,8 +215,29 @@ def _run_analysis(
         log(f"Starting analysis for {ticker} on {trade_date}")
 
         # Imported here to avoid circular imports and keep server startup fast.
+        from backend.services.db_memory import DatabaseMemoryLog
         from cli.stats_handler import StatsCallbackHandler
         from marketminds.graph.trading_graph import MarketMindsGraph
+
+        # The web app keeps its decision log in the database, not in a file:
+        # a deployed container's disk does not survive a restart, and this log
+        # is the state whose loss makes later analyses worse. Written against
+        # the run's owner so the Memory page can show a user only their own,
+        # while every run still learns from the whole pool.
+        #
+        # Passed to the graph directly, never through `config`: the config dict
+        # is deep-copied by `set_config`, and this object holds a session
+        # factory that cannot be copied.
+        memory_log = DatabaseMemoryLog(
+            SessionLocal,
+            user_id=run.user_id,
+            max_entries=config.get("memory_log_max_entries"),
+        )
+
+        # State logs stay off — `runs.result_json` already holds the same
+        # state, so the file copy is pure duplication. A plain bool, so it is
+        # safe in config.
+        config = {**config, "save_state_logs": False}
 
         stats_handler = StatsCallbackHandler()
 
@@ -264,6 +291,7 @@ def _run_analysis(
             config=config,
             callbacks=[stats_handler],
             on_chunk=on_chunk,
+            memory_log=memory_log,
         )
 
         log("Running agent pipeline — this may take several minutes...")

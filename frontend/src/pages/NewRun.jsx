@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { createRun, getProviderModels, listProviders } from '../lib/api';
+import { getKey } from '../lib/apiKeys';
+import { useAuth } from '../lib/auth-context';
+import ApiKeyField from '../components/ApiKeyField';
 import { classNames as cx, todayISO } from '../lib/format';
 import {
   ANALYSTS,
@@ -47,6 +50,10 @@ const INITIAL = {
 
 export default function NewRun() {
   const navigate = useNavigate();
+  const { enabled: authEnabled, loading: authLoading, signedIn, signIn } = useAuth();
+  // Only block once we actually know: while the session is resolving,
+  // showing the sign-in prompt would flash it at users who are signed in.
+  const needsSignIn = authEnabled && !authLoading && !signedIn;
   const [searchParams] = useSearchParams();
   const [providers, setProviders] = useState([]);
   const [models, setModels] = useState({ quick: [], deep: [] });
@@ -62,6 +69,11 @@ export default function NewRun() {
 
   // Free-text model ids, used when the dropdown is set to "Custom model ID".
   const [customModel, setCustomModel] = useState({ quick: '', deep: '' });
+
+  // The visitor's own provider key, read from this browser. Derived rather
+  // than stored: the counter bumps when the field saves, which re-reads
+  // storage without an effect. Never persisted server-side.
+  const [, bumpKeyVersion] = useState(0);
 
   const set = (patch) => setForm((f) => ({ ...f, ...patch }));
 
@@ -106,6 +118,10 @@ export default function NewRun() {
   }, [providerId]);
 
   const provider = providers.find((p) => p.name === form.llm_provider);
+  // Read straight from browser storage on each render. `keyVersion` exists
+  // only to force that render after the field saves — memoising here would
+  // mean lying to the dependency checker about reading external state.
+  const apiKey = getKey(form.llm_provider);
   const effortConfig = EFFORT_PROVIDERS[form.llm_provider];
   const isOllama = form.llm_provider === 'ollama';
 
@@ -128,6 +144,9 @@ export default function NewRun() {
 
   const validate = () => {
     if (!form.ticker.trim()) return 'Enter a ticker symbol.';
+    if (provider?.requires_key && !apiKey && !provider.has_key) {
+      return `Add your ${provider.display_name} API key, or choose a provider the server has configured.`;
+    }
     if (!form.trade_date) return 'Pick an analysis date.';
     if (!form.selected_analysts.length) return 'Select at least one analyst.';
     if (!resolvedModels.quick) return 'Enter the custom quick-thinking model id.';
@@ -158,6 +177,8 @@ export default function NewRun() {
       max_debate_rounds: Number(form.max_debate_rounds),
       max_risk_discuss_rounds: Number(form.max_risk_discuss_rounds),
       output_language: form.output_language,
+      // Sent per run, used for that run, stored nowhere.
+      api_key: apiKey || null,
       backend_url: form.backend_url.trim() || null,
       reasoning_effort: form.reasoning_effort || null,
       checkpoint_enabled: form.checkpoint_enabled,
@@ -185,13 +206,6 @@ export default function NewRun() {
 
       {error && <Alert title="Cannot start the run">{error}</Alert>}
 
-      {provider && provider.requires_key && !provider.has_key && (
-        <Alert tone="hold" icon="key" title={`${provider.display_name} has no API key`}>
-          Set <code className="font-mono">{provider.env_var}</code> in your{' '}
-          <code className="font-mono">.env</code> and restart the backend, or the run will fail on
-          its first call.
-        </Alert>
-      )}
 
       {isOllama && !form.backend_url && (
         <Alert tone="accent" icon="info" title="Local runtime">
@@ -243,8 +257,11 @@ export default function NewRun() {
           description="A quick model for the analysts, a deep one for the decision makers"
           action={
             provider && (
-              <Badge tone={provider.has_key ? 'buy' : 'hold'} icon="key">
-                {provider.has_key ? 'Key present' : 'No key'}
+              <Badge
+                tone={apiKey ? 'buy' : provider.has_key ? 'accent' : 'hold'}
+                icon="key"
+              >
+                {apiKey ? 'Your key' : provider.has_key ? 'Server key' : 'No key'}
               </Badge>
             )
           }
@@ -289,6 +306,19 @@ export default function NewRun() {
             onCustomChange={(v) => setCustomModel((c) => ({ ...c, deep: v }))}
           />
         </div>
+
+        {provider?.requires_key && (
+          <div className="border-t border-line px-5 py-4">
+            <ApiKeyField
+              key={form.llm_provider}
+              provider={form.llm_provider}
+              providerLabel={provider.display_name}
+              envVar={provider.env_var}
+              serverHasKey={provider.has_key}
+              onSaved={() => bumpKeyVersion((v) => v + 1)}
+            />
+          </div>
+        )}
       </Card>
 
       {/* --------------------------------------------------------- analysts */}
@@ -558,14 +588,31 @@ export default function NewRun() {
       </Card>
 
       {/* ----------------------------------------------------------- submit */}
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-line bg-surface px-5 py-4 shadow-sm">
-        <p className="text-[12.5px] text-ink-muted">
-          A full run takes several minutes. You can watch every agent as it works.
-        </p>
-        <Button type="submit" variant="primary" size="lg" icon="play" loading={submitting}>
-          {submitting ? 'Starting…' : 'Start analysis'}
-        </Button>
-      </div>
+      {/* Sign-in is required only here. Everything above can be configured
+          signed out, so a visitor is not asked to authenticate before they
+          have seen what they would be authenticating for. */}
+      {needsSignIn ? (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-accent-border bg-accent-soft px-5 py-4">
+          <div className="min-w-0">
+            <p className="text-[13.5px] font-medium text-ink">Sign in to run this analysis</p>
+            <p className="mt-0.5 text-[12.5px] text-ink-secondary">
+              Your runs stay private to your account. Your API key stays in this browser.
+            </p>
+          </div>
+          <Button variant="primary" size="lg" onClick={signIn}>
+            Continue with Google
+          </Button>
+        </div>
+      ) : (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-line bg-surface px-5 py-4 shadow-sm">
+          <p className="text-[12.5px] text-ink-muted">
+            A full run takes several minutes. You can watch every agent as it works.
+          </p>
+          <Button type="submit" variant="primary" size="lg" icon="play" loading={submitting}>
+            {submitting ? 'Starting…' : 'Start analysis'}
+          </Button>
+        </div>
+      )}
     </form>
   );
 }

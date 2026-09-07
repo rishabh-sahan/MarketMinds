@@ -4,6 +4,7 @@ import { getMemory } from '../lib/api';
 import { classNames as cx, formatPercent, ratingTone } from '../lib/format';
 import { Markdown } from '../components/run/ReportView';
 import { StatTile } from '../components/charts';
+import SignedOutNotice from '../components/SignedOutNotice';
 import {
   Alert,
   Badge,
@@ -66,6 +67,8 @@ export default function Memory() {
           Refresh
         </Button>
       </PageHeader>
+
+      <SignedOutNotice what="decisions" />
 
       {error && (
         <Alert title="Could not read the decision log" action={<Button size="sm" onClick={load}>Retry</Button>}>

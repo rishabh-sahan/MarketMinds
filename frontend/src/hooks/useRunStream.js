@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useReducer, useRef } from 'react';
+import { authToken } from '../lib/api';
 
 /**
  * The socket lives on the same origin as the page, so its URL is derived from
@@ -178,7 +179,14 @@ export function useRunStream(runId, { enabled = true } = {}) {
 
       let ws;
       try {
-        ws = new WebSocket(`${WS_BASE}/runs/${runId}`);
+        // A WebSocket cannot carry an Authorization header, and putting the
+        // token in the query string would write a live credential into every
+        // proxy and access log. The subprotocol list is not logged that way,
+        // so the token rides there and the server echoes back 'bearer'.
+        const token = authToken();
+        ws = token
+          ? new WebSocket(`${WS_BASE}/runs/${runId}`, ['bearer', token])
+          : new WebSocket(`${WS_BASE}/runs/${runId}`);
       } catch {
         return;
       }

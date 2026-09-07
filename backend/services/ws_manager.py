@@ -20,8 +20,10 @@ class WSManager:
         self._connections: Dict[str, List[WebSocket]] = {}
         self._lock = asyncio.Lock()
 
-    async def connect(self, run_id: str, ws: WebSocket):
-        await ws.accept()
+    async def connect(self, run_id: str, ws: WebSocket, subprotocol: str | None = None):
+        # The subprotocol must be echoed back when the client offered one, or
+        # the browser rejects the handshake it just completed.
+        await ws.accept(subprotocol=subprotocol)
         async with self._lock:
             self._connections.setdefault(run_id, []).append(ws)
         logger.info("WS connected for run %s (total: %d)", run_id, len(self._connections[run_id]))

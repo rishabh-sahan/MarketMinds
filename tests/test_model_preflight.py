@@ -5,6 +5,7 @@ from unittest.mock import patch
 
 import pytest
 
+from marketminds.llm_clients import preflight
 from marketminds.llm_clients.preflight import (
     ModelCheck,
     _classify,
@@ -83,10 +84,10 @@ class ContextWindowTests(unittest.TestCase):
 @pytest.mark.unit
 class CheckModelTests(unittest.TestCase):
     def setUp(self):
-        check_model.cache_clear()
+        preflight.clear_cache()
 
     def tearDown(self):
-        check_model.cache_clear()
+        preflight.clear_cache()
 
     def test_missing_model_rejected_without_a_network_call(self):
         for value in ("", "custom"):

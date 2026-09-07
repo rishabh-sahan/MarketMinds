@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { cancelRun, deleteRun, downloadRunReport, listRuns } from '../lib/api';
+import SignedOutNotice from '../components/SignedOutNotice';
 import {
   durationBetween,
   formatDuration,
@@ -106,7 +107,7 @@ export default function History() {
 
   const handleExport = async (run) => {
     try {
-      await downloadRunReport(run.id, `marketminds-${run.ticker}-${run.trade_date}.md`);
+      await downloadRunReport(run.id, `marketminds-${run.ticker}-${run.trade_date}.pdf`);
     } catch (err) {
       toast.push(err.message, 'danger');
     }
@@ -126,6 +127,8 @@ export default function History() {
           New analysis
         </Button>
       </PageHeader>
+
+      <SignedOutNotice what="analyses" />
 
       {/* ---------------------------------------------------------- filters */}
       <Card className="p-3">
@@ -291,7 +294,7 @@ export default function History() {
                                 variant="ghost"
                                 size="icon"
                                 aria-label={`Export ${run.ticker}`}
-                                title="Export markdown"
+                                title="Export PDF"
                                 onClick={() => handleExport(run)}
                               >
                                 <Icon name="download" size={14} />

@@ -6,12 +6,35 @@ from pathlib import Path
 # Project root (parent of backend/)
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
-# SQLite database — stored alongside the project for easy dev setup
+# Database. SQLite by default — one file, no server, right for local use.
+# A deployed instance should set DATABASE_URL to a PostgreSQL DSN instead:
+# container disks are usually ephemeral, and SQLite cannot be shared between
+# processes.
 DATABASE_PATH = os.getenv(
     "MARKETMINDS_DB_PATH",
     str(PROJECT_ROOT / "backend" / "marketminds.db"),
 )
-DATABASE_URL = f"sqlite:///{DATABASE_PATH}"
+
+
+def _database_url() -> str:
+    """Resolve the connection URL, normalising the DSN hosts hand out.
+
+    Managed providers (Render, Heroku, Railway) still emit ``postgres://``,
+    a scheme SQLAlchemy dropped support for; and the default driver for
+    ``postgresql://`` is psycopg2, while this project installs psycopg 3.
+    Both are corrected here so a pasted DSN simply works.
+    """
+    url = os.getenv("DATABASE_URL", "").strip()
+    if not url:
+        return f"sqlite:///{DATABASE_PATH}"
+    if url.startswith("postgres://"):
+        url = "postgresql://" + url[len("postgres://"):]
+    if url.startswith("postgresql://"):
+        url = "postgresql+psycopg://" + url[len("postgresql://"):]
+    return url
+
+
+DATABASE_URL = _database_url()
 
 # CORS — additional allowed origin for a deployed frontend. The local Vite
 # dev origins are always allowed (see backend/main.py).

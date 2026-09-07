@@ -26,6 +26,8 @@ from backend.services.run_service import set_ws_loop
 logger = logging.getLogger(__name__)
 
 from backend.routers import runs, config, providers, memory
+from backend.auth import warn_if_open
+from backend.routers import auth as auth_router
 from backend.ws.stream import router as ws_router
 
 
@@ -34,6 +36,7 @@ async def lifespan(app: FastAPI):
     """Create DB tables on startup."""
     set_ws_loop(asyncio.get_running_loop())
     create_tables()
+    warn_if_open()
     yield
 
 
@@ -61,6 +64,7 @@ app.include_router(runs.router)
 app.include_router(config.router)
 app.include_router(providers.router)
 app.include_router(memory.router)
+app.include_router(auth_router.router)
 app.include_router(ws_router)
 
 

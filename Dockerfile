@@ -35,6 +35,11 @@ ENV PYTHONUNBUFFERED=1 \
 
 WORKDIR /app
 
+# The only OS package needed: a Unicode font. ReportLab's built-ins predate the
+# rupee sign (U+20B9), so without this every price in a PDF renders as a black
+# box. ~1.5MB, and it keeps the export legible for an Indian market tool.
+RUN apt-get update     && apt-get install -y --no-install-recommends fonts-dejavu-core     && rm -rf /var/lib/apt/lists/*
+
 # Python dependencies. `pip install .` reads pyproject.toml, so the packages it
 # declares must be present; backend/requirements.txt adds the web server.
 # Application code that changes often (backend/) is copied afterwards so this

@@ -1,0 +1,66 @@
+# MarketMinds with PostgreSQL, for a deployment-shaped setup.
+#
+#   docker compose -f docker-compose.postgres.yml up -d --build
+#
+# Use this rather than the plain docker-compose.yml when you want the same
+# database engine locally that you will run in production, or when a single
+# SQLite file is no longer enough — more than one process, or a host whose
+# disk does not survive a restart.
+#
+# For an actual deployment you would usually drop the `db` service here and
+# point DATABASE_URL at a managed instance (Neon, Supabase, Railway) instead.
+
+services:
+  marketminds:
+    build: .
+    image: marketminds:latest
+    container_name: marketminds
+    ports:
+      - "${MARKETMINDS_PORT:-8000}:8000"
+    env_file:
+      - .env
+    environment:
+      # Overrides the SQLite default. The app normalises postgres:// and
+      # postgresql:// DSNs to the psycopg 3 driver it ships with, so a DSN
+      # pasted from a managed provider works unchanged.
+      DATABASE_URL: postgresql://marketminds:${POSTGRES_PASSWORD:-marketminds}@db:5432/marketminds
+      # Google sign-in. Both come from .env; unset means the instance runs
+      # open, which is fine for a local stack and not for a public one.
+      SUPABASE_URL: ${SUPABASE_URL:-}
+      SUPABASE_ANON_KEY: ${SUPABASE_ANON_KEY:-}
+    volumes:
+      # Still needed even with Postgres: the decision log the agents learn
+      # from, cached market data, and checkpoints are files, not tables.
+      - marketminds-data:/data
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+    stop_grace_period: 60s
+
+  db:
+    image: postgres:16-alpine
+    container_name: marketminds-db
+    environment:
+      POSTGRES_USER: marketminds
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-marketminds}
+      POSTGRES_DB: marketminds
+    volumes:
+      - marketminds-pg:/var/lib/postgresql/data
+    healthcheck:
+      # The app creates its tables at startup, so it must not start before
+      # the server is genuinely accepting connections.
+      test: ["CMD-SHELL", "pg_isready -U marketminds -d marketminds"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    restart: unless-stopped
+    # Not published by default — only the app needs to reach it. Uncomment to
+    # inspect the database with a client on the host.
+    # ports:
+    #   - "5432:5432"
+
+volumes:
+  marketminds-data:
+  marketminds-pg:

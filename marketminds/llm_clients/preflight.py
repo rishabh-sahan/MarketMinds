@@ -48,8 +48,15 @@ class ModelCheck:
         return self.ok
 
 
-def _classify(provider: str, model: str, exc: Exception) -> ModelCheck:
-    """Turn a provider exception into an actionable sentence."""
+def _classify(
+    provider: str, model: str, exc: Exception, own_key: bool = False
+) -> ModelCheck:
+    """Turn a provider exception into an actionable sentence.
+
+    ``own_key`` says whether the caller supplied the credential. It only
+    changes the wording, but pointing someone at a .env file they do not
+    control is worse than saying nothing.
+    """
     msg = str(exc)
     low = msg.lower()
 
@@ -77,6 +84,12 @@ def _classify(provider: str, model: str, exc: Exception) -> ModelCheck:
         )
 
     if "api key" in low or "unauthenticated" in low or "401" in low or "invalid_api_key" in low:
+        if own_key:
+            return ModelCheck(
+                False,
+                f"{provider} rejected the API key you supplied. Check that it is "
+                f"correct, active, and issued for {provider}.",
+            )
         return ModelCheck(
             False,
             f"{provider} rejected the API key. Check the matching *_API_KEY entry in "
@@ -96,12 +109,8 @@ def _classify(provider: str, model: str, exc: Exception) -> ModelCheck:
     return ModelCheck(False, f"{provider} rejected '{model}': {msg[:240]}")
 
 
-@lru_cache(maxsize=64)
-def check_model(provider: str, model: str, backend_url: Optional[str] = None) -> ModelCheck:
-    """Probe one model, returning whether it is usable and why not if it isn't.
-
-    Cached, so the repeated checks a single run performs cost one round-trip.
-    """
+def _probe(provider: str, model: str, backend_url: Optional[str], api_key: Optional[str]) -> ModelCheck:
+    """Make the actual call. Separated so caching can wrap only the safe case."""
     if not model or model == "custom":
         return ModelCheck(
             False,
@@ -112,13 +121,39 @@ def check_model(provider: str, model: str, backend_url: Optional[str] = None) ->
     try:
         from marketminds.llm_clients import create_llm_client
 
-        llm = create_llm_client(provider=provider, model=model, base_url=backend_url).get_llm()
+        extra = {"api_key": api_key} if api_key else {}
+        llm = create_llm_client(
+            provider=provider, model=model, base_url=backend_url, **extra
+        ).get_llm()
         llm.invoke(_PROBE_PROMPT)
         return ModelCheck(True)
     except Exception as exc:
-        result = _classify(provider, model, exc)
+        result = _classify(provider, model, exc, own_key=bool(api_key))
         logger.info("Preflight rejected %s/%s: %s", provider, model, result.reason)
         return result
+
+
+@lru_cache(maxsize=64)
+def _probe_cached(provider: str, model: str, backend_url: Optional[str]) -> ModelCheck:
+    return _probe(provider, model, backend_url, None)
+
+
+def check_model(
+    provider: str,
+    model: str,
+    backend_url: Optional[str] = None,
+    api_key: Optional[str] = None,
+) -> ModelCheck:
+    """Probe one model, returning whether it is usable and why not if it isn't.
+
+    Results are cached only when the environment's own credentials are used.
+    A caller-supplied key is never placed in a cache key: an lru_cache retains
+    its arguments for the life of the process, which would leave other people's
+    credentials sitting in memory long after their request finished.
+    """
+    if api_key:
+        return _probe(provider, model, backend_url, api_key)
+    return _probe_cached(provider, model, backend_url)
 
 
 def context_window_from_error(exc: Exception) -> Optional[int]:
@@ -133,4 +168,4 @@ def context_window_from_error(exc: Exception) -> Optional[int]:
 
 def clear_cache() -> None:
     """Forget cached results — used when credentials change mid-process."""
-    check_model.cache_clear()
+    _probe_cached.cache_clear()

@@ -5,6 +5,11 @@ from typing import List, Optional
 from pathlib import Path
 import re
 
+from marketminds.agents.utils.memory_format import (
+    format_full,
+    format_reflection_only,
+    select_past_context,
+)
 from marketminds.agents.utils.rating import parse_rating
 
 logger = logging.getLogger(__name__)
@@ -85,31 +90,12 @@ class TradingMemoryLog:
         return [e for e in self.load_entries() if e.get("pending")]
 
     def get_past_context(self, ticker: str, n_same: int = 5, n_cross: int = 3) -> str:
-        """Return formatted past context string for agent prompt injection."""
-        entries = [e for e in self.load_entries() if not e.get("pending")]
-        if not entries:
-            return ""
+        """Return formatted past context string for agent prompt injection.
 
-        same, cross = [], []
-        for e in reversed(entries):
-            if len(same) >= n_same and len(cross) >= n_cross:
-                break
-            if e["ticker"] == ticker and len(same) < n_same:
-                same.append(e)
-            elif e["ticker"] != ticker and len(cross) < n_cross:
-                cross.append(e)
-
-        if not same and not cross:
-            return ""
-
-        parts = []
-        if same:
-            parts.append(f"Past analyses of {ticker} (most recent first):")
-            parts.extend(self._format_full(e) for e in same)
-        if cross:
-            parts.append("Recent cross-ticker lessons:")
-            parts.extend(self._format_reflection_only(e) for e in cross)
-        return "\n\n".join(parts)
+        Selection and formatting are shared with the database-backed log, so
+        the same history produces the same prompt whichever store holds it.
+        """
+        return select_past_context(self.load_entries(), ticker, n_same, n_cross)
 
     # --- Update path (Phase B) ---
 
@@ -297,20 +283,11 @@ class TradingMemoryLog:
         entry["reflection"] = reflection_match.group(1).strip() if reflection_match else ""
         return entry
 
+    # Formatting lives in memory_format so the database-backed log renders
+    # entries identically. Kept as methods because callers and tests use them.
+
     def _format_full(self, e: dict) -> str:
-        raw = e["raw"] or "n/a"
-        alpha = e["alpha"] or "n/a"
-        holding = e["holding"] or "n/a"
-        tag = f"[{e['date']} | {e['ticker']} | {e['rating']} | {raw} | {alpha} | {holding}]"
-        parts = [tag, f"DECISION:\n{e['decision']}"]
-        if e["reflection"]:
-            parts.append(f"REFLECTION:\n{e['reflection']}")
-        return "\n\n".join(parts)
+        return format_full(e)
 
     def _format_reflection_only(self, e: dict) -> str:
-        tag = f"[{e['date']} | {e['ticker']} | {e['rating']} | {e['raw'] or 'n/a'}]"
-        if e["reflection"]:
-            return f"{tag}\n{e['reflection']}"
-        text = e["decision"][:300]
-        suffix = "..." if len(e["decision"]) > 300 else ""
-        return f"{tag}\n{text}{suffix}"
+        return format_reflection_only(e)

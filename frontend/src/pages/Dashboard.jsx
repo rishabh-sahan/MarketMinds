@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { getRunStats, listRuns } from '../lib/api';
+import SignedOutNotice from '../components/SignedOutNotice';
 import {
   compactNumber,
   durationBetween,
@@ -92,6 +93,8 @@ export default function Dashboard() {
           New analysis
         </Button>
       </PageHeader>
+
+      <SignedOutNotice what="analyses" />
 
       {error && (
         <Alert title="Could not reach the API" action={<Button size="sm" onClick={load}>Retry</Button>}>

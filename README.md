@@ -146,6 +146,80 @@ For local models set `llm_provider: "ollama"` — the default endpoint is `http:
 
 ---
 
+## Reports and API keys
+
+### PDF export
+
+A finished run downloads as a single PDF — cover page with the rating, run
+metadata and usage, then every agent's report in pipeline order. Rendered
+server-side with ReportLab, so it needs no browser and works unchanged inside
+the container.
+
+The agents still exchange **markdown** between themselves, and the decision log
+stays markdown because it is injected into the Portfolio Manager's prompt.
+Only what a person downloads is a PDF.
+
+One wrinkle worth knowing: ReportLab's built-in fonts predate the rupee sign
+(U+20B9, introduced 2010), so every `₹` would render as a black box. The image
+installs `fonts-dejavu-core` and the renderer picks the first font it finds
+that carries the glyph, falling back to writing "Rs." rather than printing
+squares.
+
+### Bring your own API key
+
+Visitors can supply their own provider credential from the New analysis page,
+which is what makes a public deployment practical — the host holds no keys and
+spends nobody's quota.
+
+The key is:
+
+- kept in **that browser's** `localStorage`, never on the server;
+- sent with the run request that needs it and used for that run only;
+- **never** written to the database, the run's `config_snapshot`, the API
+  response, or any log — the field is declared `exclude=True` and the snapshot
+  is built from an explicit allowlist;
+- never placed in the preflight cache, since an `lru_cache` retains its
+  arguments for the life of the process.
+
+`tests/test_byo_api_key.py` pins each of those properties. If the server also
+has a key configured for that provider, the visitor's key takes precedence and
+the server key is the fallback.
+
+### Google sign-in
+
+Optional, and off unless configured. Set `SUPABASE_URL` and
+`SUPABASE_ANON_KEY` and the app requires a signed-in Google account before an
+analysis can start — and nowhere else. The landing page, the guide, the
+dashboard and any run published as a demo stay readable signed out.
+
+With auth on:
+
+- a run belongs to whoever started it, and another user asking for it gets a
+  404 rather than a 403, so an id's existence is not confirmed;
+- `is_public = 1` publishes a run into the signed-out showcase. Visitors see a
+  selection of published runs ordered by a random seed their browser generates
+  once, so different people land on different examples while each sees a stable
+  set across reloads. Only published runs ever appear there — never the table
+  at large;
+- the decision log is **shared for reading and private for display** — every
+  run learns from the whole pool, while the Memory page shows a user only their
+  own entries. Worth being clear about: another user's reasoning can influence
+  your report, because it fed the prompt. The history is private, its
+  influence is not;
+- the live WebSocket carries the session token as a subprotocol rather than a
+  query parameter, which keeps a live credential out of proxy access logs.
+
+With those variables unset the instance runs open — right for a local checkout,
+wrong for a public URL — and says so in a startup warning. The rules are pinned
+in `tests/test_auth_scoping.py`.
+
+Supabase Auth is used only as an identity provider. The backend connects to
+Postgres directly and enforces ownership in its routers; row-level security is
+enabled with no policies purely to keep the tables unreachable through
+PostgREST, whose publishable key ships in the frontend bundle.
+
+---
+
 ## Running with Docker
 
 One image, one container, one port — the React app is compiled at build time
@@ -178,6 +252,14 @@ Everything mutable lives under `/data`, so one volume carries the whole state:
 
 Drop the volume and the system forgets its past calls — the Memory page starts
 empty and the Portfolio Manager loses its prior lessons.
+
+### Deploying it publicly
+
+[DEPLOYMENT.md](DEPLOYMENT.md) covers putting this on a free-tier host with a
+managed PostgreSQL database: which host, which database, which environment
+variables, what still needs a disk, and what it costs once the free tier runs
+out. Read its opening section first — a deployed instance has **no
+authentication**, so every visitor sees every run.
 
 ### Bringing existing history into the container
 
@@ -296,9 +378,31 @@ counters. Agent status is inferred from the graph state after each node, so
 reopening a run mid-flight restores the real pipeline position rather than
 starting the view from scratch.
 
-History, results and usage counters are stored in SQLite at
-`backend/marketminds.db` — override with `MARKETMINDS_DB_PATH`. New columns on
-an existing database are added automatically on startup.
+History, results and usage counters are stored in **SQLite** at
+`backend/marketminds.db` — override the path with `MARKETMINDS_DB_PATH`. New
+columns on an existing database are added automatically at startup.
+
+Set **`DATABASE_URL`** to a PostgreSQL DSN to switch engines; everything above
+the ORM is unchanged. JSON columns become `JSONB` automatically, and the DSN
+schemes managed providers hand out (`postgres://`, `postgresql://`) are
+normalised to the psycopg 3 driver the image ships, so a pasted connection
+string works as-is.
+
+```bash
+# same engine locally as in production
+docker compose -f docker-compose.postgres.yml up -d --build
+```
+
+A deployed instance also keeps the **decision log** in the database rather than
+in `trading_memory.md`, and stops writing duplicate state-log files — the CLI
+keeps using the markdown log. `scripts/migrate_to_postgres.py` moves existing
+runs, events and log entries across, and is safe to re-run.
+
+Use Postgres when the container's disk is ephemeral, or when more than one
+process needs the data — SQLite takes a write lock on the whole file and cannot
+be shared. The startup migration handles **added** columns on both engines;
+a rename, type change or drop needs Alembic, which this project does not yet
+carry.
 
 Note: `--reload` restarts the server when you save a file, which kills any
 in-flight analysis. Drop it when running a full analysis, since those take
@@ -309,6 +413,7 @@ several minutes.
 | Route | Purpose |
 | --- | --- |
 | `/` | Landing page |
+| `/guide` | How to use the site — the workflow, all five pipeline stages, FAQ |
 | `/dashboard` | Run stats, rating mix, activity and token usage |
 | `/runs/new` | Configure and launch an analysis, with an advanced panel |
 | `/runs/:id/live` | Live agent pipeline, streaming reports, event log, stop control |
@@ -323,12 +428,14 @@ several minutes.
 | --- | --- | --- |
 | `GET` | `/api/health` | Liveness check |
 | `POST` | `/api/runs` | Create and start a run |
-| `GET` | `/api/runs` | List runs (`ticker`, `status`, `limit`, `offset`) |
-| `GET` | `/api/runs/stats` | Aggregate counters, rating mix, activity, usage |
+| `GET` | `/api/runs` | List runs (`ticker`, `status`, `limit`, `offset`, `seed`) |
+| `GET` | `/api/runs/stats` | Aggregate counters, rating mix, activity, usage (`seed`) |
 | `GET` | `/api/runs/{id}` | Full run detail with its event history |
 | `POST` | `/api/runs/{id}/cancel` | Stop an in-flight run at the next agent boundary |
 | `DELETE` | `/api/runs/{id}` | Delete a finished run and its events |
-| `GET` | `/api/runs/{id}/export` | Download the run as one markdown document |
+| `GET` | `/api/runs/{id}/export` | Download the run as a PDF report |
+| `GET` | `/api/auth/config` | Whether sign-in is available, and its client config |
+| `GET` | `/api/auth/me` | The caller's identity, or null |
 | `GET` · `PUT` | `/api/config` | Read / update the in-memory runtime config |
 | `GET` · `POST` · `DELETE` | `/api/config/saved` | Named config presets |
 | `GET` | `/api/providers` | Providers, their key env var, and whether it is set |
@@ -428,7 +535,9 @@ config["data_vendors"] = {
 
 ### Decision log
 
-Always on. Each completed run appends its decision to `~/.marketminds/memory/trading_memory.md` as a pending entry. On the next run for the same ticker, the realised return is fetched (raw, plus alpha against a benchmark), a short reflection is generated, and the most recent same-ticker decisions plus recent cross-ticker lessons are injected into the Portfolio Manager's prompt — so each analysis carries forward what worked and what didn't.
+Always on. Each completed run records its decision as a pending entry — in
+`~/.marketminds/memory/trading_memory.md` for the CLI and local runs, or in the
+`memory_entries` table when the web app is running against a database. On the next run for the same ticker, the realised return is fetched (raw, plus alpha against a benchmark), a short reflection is generated, and the most recent same-ticker decisions plus recent cross-ticker lessons are injected into the Portfolio Manager's prompt — so each analysis carries forward what worked and what didn't.
 
 The alpha benchmark follows the exchange: the **Nifty 50** (`^NSEI`) for `.NS`
 listings and the **Sensex** (`^BSESN`) for `.BO`. Override globally with
@@ -454,13 +563,18 @@ marketminds/          Core framework
     india_market.py       Index, sector, currency and commodity snapshot
     nse.py                NSE corporate announcements (best-effort)
   graph/                LangGraph setup, routing, propagation, reflection
-  llm_clients/          Provider clients, model catalog, capability table
+  llm_clients/          Provider clients, model catalog, capability table,
+                          preflight model validation
+  reporting/            PDF rendering for downloaded reports
+scripts/
+  migrate_to_postgres.py  One-shot SQLite -> Postgres history migration
 cli/                    Interactive terminal application
 backend/                FastAPI server — REST + WebSocket, serves the built UI
 frontend/               React + Vite + Tailwind web UI
 tests/                  Test suite
 Dockerfile              Single-image build: UI compiled, then served by the API
-docker-compose.yml      One service, one port, one data volume
+docker-compose.yml      One service, one port, one data volume (SQLite)
+docker-compose.postgres.yml   App plus PostgreSQL, deployment-shaped
 ```
 
 ## Tests

@@ -70,7 +70,42 @@ export default function Landing() {
             </Button>
           </form>
 
-          <p className="mt-3 text-[12px] text-ink-muted">
+          {/* Not a third button: a full-width card aligned to the form above.
+              Accent-filled it competed with Analyse for the same attention in
+              the same colour; outlined and muted it read as fine print and was
+              skipped. A surface card with an accent icon chip is visibly
+              distinct from both, and its shape says "read this" rather than
+              "click to submit". */}
+          <div className="mx-auto mt-9 max-w-md">
+            <Link
+              to="/guide"
+              className={cx(
+                'group flex items-center gap-3 rounded-2xl border border-line-strong bg-surface',
+                'px-4 py-3.5 text-left shadow-sm transition-all',
+                'hover:-translate-y-0.5 hover:border-accent-border hover:shadow-md',
+                'focus-visible:border-accent focus-visible:outline-none',
+              )}
+            >
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-accent-soft text-accent-text ring-1 ring-accent-border">
+                <Icon name="info" size={16} />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-[13.5px] font-semibold text-ink">
+                  New here?
+                </span>
+                <span className="block text-[12.5px] text-ink-secondary">
+                  How to use this for stock analysis
+                </span>
+              </span>
+              <Icon
+                name="arrowRight"
+                size={16}
+                className="shrink-0 text-ink-muted transition-all group-hover:translate-x-0.5 group-hover:text-accent"
+              />
+            </Link>
+          </div>
+
+          <p className="mt-6 text-[12px] text-ink-muted">
             Research and educational use only. Not financial advice.
           </p>
         </div>
@@ -182,17 +217,12 @@ export default function Landing() {
               {
                 icon: 'news',
                 title: 'Full audit trail',
-                body: 'Every analyst report, both sides of each debate, and the timeline of the run — exportable as one markdown document.',
+                body: 'Every analyst report, both sides of each debate, and the timeline of the run — downloadable as one PDF.',
               },
               {
                 icon: 'layers',
                 title: 'Indian sources, no keys',
                 body: 'Google News India, Economic Times, Moneycontrol, Mint, Business Standard and Hindu BusinessLine, plus NSE corporate filings — all free.',
-              },
-              {
-                icon: 'target',
-                title: 'Five-tier ratings',
-                body: 'Buy, Overweight, Hold, Underweight or Sell, with a thesis, an executive summary, and a rupee price target.',
               },
             ].map((feature) => (
               <div key={feature.title} className="rounded-xl border border-line bg-bg p-5">
@@ -203,6 +233,36 @@ export default function Landing() {
                 </p>
               </div>
             ))}
+          </div>
+
+          {/* The rating is what the whole pipeline exists to produce, so it
+              closes the section as a full-width card. Six cards divide evenly
+              into the grid above; a seventh would sit alone on its own row. */}
+          <div className="mt-3 flex flex-col gap-4 rounded-xl border border-accent-border bg-accent-soft p-5 sm:flex-row sm:items-center sm:gap-6 sm:p-6">
+            <div className="flex items-center gap-3 sm:shrink-0">
+              <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent text-on-accent">
+                <Icon name="target" size={19} />
+              </span>
+              <h3 className="text-[15px] font-semibold text-ink">
+                What you get back
+              </h3>
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap gap-1.5">
+                {['Buy', 'Overweight', 'Hold', 'Underweight', 'Sell'].map((rating) => (
+                  <span
+                    key={rating}
+                    className="rounded-md border border-line bg-surface px-2.5 py-1 text-[12.5px] font-medium text-ink"
+                  >
+                    {rating}
+                  </span>
+                ))}
+              </div>
+              <p className="mt-2.5 text-[13px] leading-relaxed text-ink-secondary">
+                One of five ratings, with a thesis, an executive summary and a price target in
+                rupees — and every argument that led there.
+              </p>
+            </div>
           </div>
         </div>
       </section>

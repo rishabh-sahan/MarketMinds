@@ -2,10 +2,35 @@
 
 from __future__ import annotations
 
-from datetime import datetime
-from typing import Optional, Any, Dict, List
+from datetime import datetime, timezone
+from typing import Annotated, Optional, Any, Dict, List
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, PlainSerializer
+
+
+def _as_utc_iso(value: Optional[datetime]) -> Optional[str]:
+    """Serialize a timestamp as ISO-8601 that states its timezone.
+
+    Every timestamp is written with ``datetime.now(timezone.utc)``, but the
+    columns are ``DateTime`` without ``timezone=True``, so both SQLite and
+    Postgres hand them back naive. Pydantic then rendered them as
+    ``2026-09-07T18:21:57`` — a UTC instant with nothing saying so.
+
+    JavaScript reads a bare ISO string as *local* time, so the browser placed
+    every timestamp UTC-offset hours away from where it belonged. In IST that
+    made a run that had just started report an elapsed time of 5h30m, exactly
+    the offset. Stamping the offset here fixes it for every consumer at once,
+    rather than each caller remembering to append a "Z".
+    """
+    if value is None:
+        return None
+    if value.tzinfo is None:
+        value = value.replace(tzinfo=timezone.utc)
+    return value.isoformat()
+
+
+# Use for any timestamp crossing the API boundary.
+UTCDateTime = Annotated[datetime, PlainSerializer(_as_utc_iso, return_type=Optional[str])]
 
 
 # ---------------------------------------------------------------------------
@@ -22,6 +47,12 @@ class RunCreate(BaseModel):
     max_debate_rounds: int = Field(default=1, ge=1, le=5)
     max_risk_discuss_rounds: int = Field(default=1, ge=1, le=5)
     output_language: str = Field(default="English")
+
+    # Caller-supplied provider credential. Used for this run only: it is
+    # deliberately absent from RunResponse, never written to config_snapshot,
+    # and never logged, so a deployed instance can run entirely on keys its
+    # visitors bring without ever becoming custodian of them.
+    api_key: Optional[str] = Field(default=None, exclude=True, repr=False)
 
     # -- Advanced ----------------------------------------------------------
     # Custom endpoint, required for Ollama and self-hosted OpenAI-compatible
@@ -42,7 +73,7 @@ class RunEventResponse(BaseModel):
     agent_name: Optional[str] = None
     event_type: str
     payload: Optional[Any] = None
-    timestamp: datetime
+    timestamp: UTCDateTime
 
     class Config:
         from_attributes = True
@@ -69,9 +100,9 @@ class RunResponse(BaseModel):
     tool_calls: int = 0
     tokens_in: int = 0
     tokens_out: int = 0
-    created_at: datetime
-    started_at: Optional[datetime] = None
-    completed_at: Optional[datetime] = None
+    created_at: UTCDateTime
+    started_at: Optional[UTCDateTime] = None
+    completed_at: Optional[UTCDateTime] = None
     events: List[RunEventResponse] = []
 
     class Config:
@@ -88,8 +119,8 @@ class RunListResponse(BaseModel):
     tool_calls: int = 0
     tokens_in: int = 0
     tokens_out: int = 0
-    created_at: datetime
-    completed_at: Optional[datetime] = None
+    created_at: UTCDateTime
+    completed_at: Optional[UTCDateTime] = None
 
     class Config:
         from_attributes = True
@@ -139,7 +170,7 @@ class SavedConfigResponse(BaseModel):
     name: str
     config_json: dict
     is_default: int
-    created_at: datetime
+    created_at: UTCDateTime
 
     class Config:
         from_attributes = True
@@ -190,12 +221,19 @@ class MemoryEntry(BaseModel):
 
 
 class MemoryResponse(BaseModel):
+    # Where the log lives — a file path for a local checkout, or a description
+    # of the table for a deployed instance. Shown so it is never a mystery
+    # which store the page is reading.
     path: str
     exists: bool
     entries: List[MemoryEntry] = Field(default_factory=list)
     total: int = 0
     resolved: int = 0
     pending: int = 0
+    # Entries across every user. Reads are shared — a run learns from the whole
+    # pool — while `total` above counts only the caller's own. Surfaced so the
+    # page can say so rather than looking as though entries went missing.
+    pool_total: int = 0
     # Mean realised alpha across resolved entries, and the hit rate of
     # directional calls that moved the right way.
     avg_alpha: Optional[float] = None
