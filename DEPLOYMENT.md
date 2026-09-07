@@ -188,19 +188,29 @@ the user to `localhost` after a successful sign-in on your live site.
 
 ### Render (recommended)
 
-Render builds the `Dockerfile` directly and its free web service does not
-sleep mid-request the way a scale-to-zero platform does.
+Render builds the `Dockerfile` directly and needs no configuration file.
 
 1. **New → Web Service**, connect the repository.
-2. Runtime: **Docker**. Render finds the `Dockerfile` at the root.
-3. Instance type: Free (512 MB). Upgrade to Starter ($7/mo) if runs get
-   OOM-killed — several agents plus yfinance in one process is not tiny.
-4. Add a **Disk**: mount path `/data`, 1 GB. This is still needed with
-   Postgres — see [What still lives on disk](#what-still-lives-on-disk).
-5. Environment variables — see [the table below](#environment-variables).
-6. Deploy.
+2. Language: **Docker**. Render finds the `Dockerfile` at the root.
+3. Instance type — see the trade-off below.
+4. Environment variables — see [the table below](#environment-variables).
+5. Deploy.
 
-Render sets `PORT` itself and the container already honours it.
+Render sets `PORT` itself and the container already honours it. **Do not add a
+disk**: the free instance type does not support one, and with the decision log
+in Postgres nothing on disk needs to survive a restart.
+
+**Free vs Starter.** The free instance is 0.1 CPU / 512 MB and spins down after
+15 minutes with no inbound traffic, taking about a minute to wake. That matters
+here more than for a typical web app: an analysis runs for several minutes in a
+background thread, and if you close the tab there is no inbound traffic to keep
+the instance awake — the run can be killed mid-flight. Keeping the tab open
+holds the WebSocket and keeps traffic flowing.
+
+Free is fine for a demo you drive yourself. For anything you link to other
+people, Starter (0.5 CPU / 512 MB, about $7/month) removes the spin-down
+entirely. If runs die without an error, suspect memory before anything else —
+twelve agents plus pandas and yfinance in one process is not small.
 
 ### Railway
 
@@ -299,19 +309,20 @@ deliberately.
 
 ## What still lives on disk
 
-Postgres now holds runs, reports, events, usage counters **and the decision
-log**. Two things are still files, and are the reason for the `/data` volume:
+Postgres holds runs, reports, events, usage counters **and the decision log**.
+Only two things are still files:
 
-- **the market data cache** (`/data/cache`) — regenerable, but a cold cache
-  makes the first run of the day noticeably slower;
+- **the market data cache** (`/data/cache`) — regenerable price history;
 - **checkpoints** (`/data/cache/checkpoints`) — only when checkpointing is
   enabled, which it is not by default.
 
-Both are disposable. Deploy without a volume and the app is fully functional;
-the first run after each restart is just slower. That is a change from the
-earlier setup: the decision log used to live here, and losing it actually made
-later analyses worse. It is now a database table, so a restart costs nothing
-that matters.
+Both are disposable, which is why no persistent disk is needed. Losing them on
+restart costs one slower run, nothing more. That is a change from the earlier
+design, where the decision log lived here and losing it genuinely made later
+analyses worse.
+
+On a host that *does* support disks (Render Starter and above, Railway, Fly),
+mounting one at `/data` is a small speed optimisation, not a requirement.
 
 ---
 
@@ -359,10 +370,12 @@ better than discovering it during a deploy.
 
 ## Cost, honestly
 
-| | Free tier | When it ends |
+| | Free tier | When you outgrow it |
 |---|---|---|
-| Render web service | 512 MB, always-on | OOM under load → $7/mo Starter |
-| Neon / Supabase | 0.5 GB | Thousands of runs before it matters |
+| Render web service | 0.1 CPU, 512 MB, 750 hrs/month, sleeps after 15 min idle | Spin-down killing unattended runs, or OOM → Starter, ~$7/mo |
+| Supabase | 0.5 GB database, paused after 7 days idle | Thousands of runs before storage matters |
 | LLM usage | — | Paid by whoever supplies the key |
 
-With BYO keys and no server key, a low-traffic deployment costs nothing.
+With bring-your-own keys and no server key, a low-traffic deployment costs
+nothing. The first thing you are likely to pay for is Render's Starter tier —
+not for capacity, but to stop the free instance sleeping through your runs.

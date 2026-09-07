@@ -31,7 +31,6 @@ PROVIDER_API_KEY_ENV: dict[str, Optional[str]] = {
     "sarvam":     "SARVAM_API_KEY",
     "openrouter": "OPENROUTER_API_KEY",
     # Local runtimes do not authenticate.
-    "ollama":     None,
 }
 
 

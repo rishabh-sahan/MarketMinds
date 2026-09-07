@@ -55,7 +55,7 @@ class RunCreate(BaseModel):
     api_key: Optional[str] = Field(default=None, exclude=True, repr=False)
 
     # -- Advanced ----------------------------------------------------------
-    # Custom endpoint, required for Ollama and self-hosted OpenAI-compatible
+    # Custom endpoint, for self-hosted or proxied OpenAI-compatible
     # gateways. None leaves each provider client on its own default.
     backend_url: Optional[str] = Field(default=None)
     # Mapped onto the provider's own thinking knob (openai_reasoning_effort,

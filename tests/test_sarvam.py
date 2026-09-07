@@ -7,10 +7,9 @@ These tests pin the wiring: factory routing, base URL, key handling, and
 catalog/validator agreement.
 
 Note: class references are resolved through the module object rather than
-imported by name. ``tests/test_ollama_base_url.py`` calls
-``importlib.reload`` on ``openai_client``, which rebinds its classes; an
-import-time reference would go stale and break isinstance checks depending
-on test order.
+imported by name. Any test that calls ``importlib.reload`` on
+``openai_client`` rebinds its classes; an import-time reference would go
+stale and break isinstance checks depending on test order.
 """
 
 from __future__ import annotations

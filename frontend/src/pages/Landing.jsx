@@ -206,8 +206,8 @@ export default function Landing() {
               },
               {
                 icon: 'cpu',
-                title: 'Fourteen providers',
-                body: 'OpenAI, Anthropic, Google, xAI, DeepSeek, Qwen, GLM, MiniMax, Sarvam, OpenRouter, or a local Ollama runtime.',
+                title: 'Thirteen providers',
+                body: 'OpenAI, Anthropic, Google, xAI, DeepSeek, Qwen, GLM, MiniMax, Sarvam and OpenRouter — bring a key for any one of them.',
               },
               {
                 icon: 'scale',

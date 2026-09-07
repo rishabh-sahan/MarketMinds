@@ -24,7 +24,7 @@ def test_every_select_llm_provider_choice_has_an_entry():
         "glm", "glm-cn",
         "minimax", "minimax-cn",
         "sarvam",
-        "openrouter", "ollama",
+        "openrouter",
     }
     assert expected.issubset(PROVIDER_API_KEY_ENV.keys())
 
@@ -51,10 +51,6 @@ def test_known_providers_resolve(provider, env_var):
     assert get_api_key_env(provider) == env_var
 
 
-def test_ollama_has_no_key():
-    assert get_api_key_env("ollama") is None
-
-
 def test_unknown_provider_returns_none():
     assert get_api_key_env("not-a-real-provider") is None
 
@@ -79,15 +75,6 @@ def test_ensure_api_key_returns_existing(monkeypatch, cli_utils):
     monkeypatch.setenv("OPENAI_API_KEY", "sk-already-set")
     result = cli_utils.ensure_api_key("openai")
     assert result == "sk-already-set"
-
-
-def test_ensure_api_key_no_op_for_ollama(monkeypatch, cli_utils):
-    # Even with no env var set, ollama should not prompt and should return None.
-    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
-    with patch.object(cli_utils, "questionary") as mock_q:
-        result = cli_utils.ensure_api_key("ollama")
-    assert result is None
-    mock_q.password.assert_not_called()
 
 
 def test_ensure_api_key_unknown_provider_no_prompt(monkeypatch, cli_utils):

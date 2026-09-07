@@ -5,7 +5,7 @@ canonical pattern:
 
 1. At agent creation, wrap the LLM with ``with_structured_output(Schema)``
    so the model returns a typed Pydantic instance. If the provider does
-   not support structured output (rare; mostly older Ollama models), the
+   not support structured output (rare; mostly older or small models), the
    wrap is skipped and the agent uses free-text generation instead.
 2. At invocation, run the structured call and render the result back to
    markdown. If the structured call itself fails for any reason

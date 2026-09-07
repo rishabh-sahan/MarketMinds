@@ -153,33 +153,27 @@ _PROVIDER_BASE_URL = {
     "minimax-cn": "https://api.minimaxi.com/v1",
     "sarvam":     "https://api.sarvam.ai/v1",
     "openrouter": "https://openrouter.ai/api/v1",
-    "ollama":     "http://localhost:11434/v1",
 }
 
 
 def _resolve_provider_base_url(provider: str) -> Optional[str]:
-    """Default base URL for ``provider``, with env-var overrides where defined.
+    """Default base URL for ``provider``.
 
-    Currently only Ollama supports an env-var override (``OLLAMA_BASE_URL``),
-    matching the convention in the broader Ollama tooling ecosystem so users
-    can point at a remote ollama-serve without editing code. The check is
-    call-time, not import-time, so tests that monkeypatch the env after
-    import behave correctly.
+    No provider currently overrides this from the environment. A caller that
+    needs a different endpoint — a corporate gateway, a self-hosted
+    OpenAI-compatible server — passes ``backend_url`` per run, which takes
+    precedence over the value returned here.
     """
-    if provider == "ollama":
-        env_url = os.environ.get("OLLAMA_BASE_URL")
-        if env_url:
-            return env_url
     return _PROVIDER_BASE_URL.get(provider)
 
 
 class OpenAIClient(BaseLLMClient):
-    """Client for OpenAI, Ollama, OpenRouter, and xAI providers.
+    """Client for OpenAI, OpenRouter, and xAI providers.
 
     For native OpenAI models, uses the Responses API (/v1/responses) which
     supports reasoning_effort with function tools across all model families
     (GPT-4.1, GPT-5). Third-party compatible providers (xAI, OpenRouter,
-    Ollama) use standard Chat Completions.
+    others) use standard Chat Completions.
     """
 
     def __init__(
@@ -219,7 +213,13 @@ class OpenAIClient(BaseLLMClient):
                         f"to your .env file)."
                     )
             else:
-                llm_kwargs["api_key"] = "ollama"
+                # Every provider with a base URL also declares a key variable.
+                # Reaching here means the two tables disagree, which is a bug
+                # worth surfacing rather than papering over with a placeholder.
+                raise ValueError(
+                    f"Provider '{self.provider}' has a base URL but no API key "
+                    f"environment variable declared in api_key_env.py."
+                )
         elif self.base_url:
             llm_kwargs["base_url"] = self.base_url
 

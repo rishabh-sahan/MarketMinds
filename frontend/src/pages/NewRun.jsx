@@ -123,7 +123,6 @@ export default function NewRun() {
   // mean lying to the dependency checker about reading external state.
   const apiKey = getKey(form.llm_provider);
   const effortConfig = EFFORT_PROVIDERS[form.llm_provider];
-  const isOllama = form.llm_provider === 'ollama';
 
   const toggleAnalyst = (key) =>
     setForm((f) => ({
@@ -206,13 +205,6 @@ export default function NewRun() {
 
       {error && <Alert title="Cannot start the run">{error}</Alert>}
 
-
-      {isOllama && !form.backend_url && (
-        <Alert tone="accent" icon="info" title="Local runtime">
-          Ollama defaults to <code className="font-mono">http://localhost:11434/v1</code>. Point it
-          elsewhere with the custom endpoint field under Advanced.
-        </Alert>
-      )}
 
       {/* ------------------------------------------------------- instrument */}
       <Card>
@@ -477,7 +469,7 @@ export default function NewRun() {
               <Field
                 label="Custom endpoint URL"
                 htmlFor="backend_url"
-                hint="For Ollama or an OpenAI-compatible gateway. Blank uses the provider default."
+                hint="For a self-hosted or proxied OpenAI-compatible endpoint. Blank uses the provider default."
               >
                 <Input
                   id="backend_url"

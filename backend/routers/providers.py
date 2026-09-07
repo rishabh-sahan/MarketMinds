@@ -33,7 +33,6 @@ _DISPLAY_NAMES = {
     "minimax-cn": "MiniMax (China)",
     "sarvam": "Sarvam AI (India)",
     "openrouter": "OpenRouter",
-    "ollama": "Ollama (Local)",
 }
 
 

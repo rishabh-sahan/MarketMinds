@@ -142,7 +142,7 @@ ALPHA_VANTAGE_API_KEY=...   # Alpha Vantage (optional data vendor)
 
 Only the key for your chosen provider is required.
 
-For local models set `llm_provider: "ollama"` — the default endpoint is `http://localhost:11434/v1`, or point `OLLAMA_BASE_URL` at a remote `ollama serve`. Pull models with `ollama pull <name>` and pick "Custom model ID" in the CLI for anything not in the dropdown.
+For a self-hosted or proxied OpenAI-compatible endpoint, set `backend_url` (or the run form's custom endpoint field) and pick "Custom model ID" for anything not in the dropdown.
 
 ---
 
@@ -319,16 +319,17 @@ docker run -p 8000:8000 \
 Set `PORT` to listen on something other than 8000 inside the container, or
 `MARKETMINDS_PORT` to change the host port that Compose publishes.
 
-To reach a provider running on the host — Ollama, say — point it at the host
-gateway rather than `localhost`, which inside a container means the container
-itself:
+To reach an OpenAI-compatible endpoint running on the host machine, set the
+run's custom endpoint to the host gateway rather than `localhost`, which inside
+a container means the container itself:
 
 ```bash
 docker run -p 8000:8000 \
-  -e OLLAMA_BASE_URL=http://host.docker.internal:11434/v1 \
   --add-host=host.docker.internal:host-gateway \
   -v marketminds-data:/data marketminds
 ```
+
+Then use `http://host.docker.internal:<port>/v1` as the endpoint.
 
 ### The CLI, from the same image
 
@@ -483,7 +484,7 @@ Adjust the config to change provider, models, or debate depth:
 config = DEFAULT_CONFIG.copy()
 config["llm_provider"] = "openai"           # openai, google, anthropic, xai, deepseek,
                                             # qwen, qwen-cn, glm, glm-cn, minimax,
-                                            # minimax-cn, sarvam, openrouter, ollama
+                                            # minimax-cn, sarvam, openrouter
 config["deep_think_llm"] = "gpt-5.4"        # complex reasoning
 config["quick_think_llm"] = "gpt-5.4-mini"  # fast tasks
 config["max_debate_rounds"] = 2
