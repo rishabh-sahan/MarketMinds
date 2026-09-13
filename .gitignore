@@ -237,4 +237,8 @@ __marimo__/
 # Generated analysis reports — written per-run to a user-chosen path
 reports/
 
+# Personal resume/portfolio extraction — not project documentation, and may
+# get asked to include personal framing (role, timeline) not meant for the repo
+PROJECT_CONTEXT.md
+
 Info.txt
